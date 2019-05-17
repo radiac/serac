@@ -1,3 +1,9 @@
+"""
+Storage on AWS S3
+"""
+from configparser import ConfigParser
+from typing import Any, Dict
+
 from .base import Storage
 
 

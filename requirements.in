@@ -1,0 +1,12 @@
+# Dev
+pip-tools
+ipdb
+pyfakefs
+pytest
+pytest-cov
+pytest-flake8
+pytest-mypy
+typing_extensions
+
+# Deployment
+peewee

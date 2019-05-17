@@ -1,7 +1,16 @@
+"""
+Local storage
+"""
+from configparser import ConfigParser
+from typing import Any, Dict
+
 from .base import Storage
 
 
 class Local(Storage):
+    """
+    Local storage
+    """
     path: str
 
     @classmethod

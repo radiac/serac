@@ -5,7 +5,7 @@ from configparser import ConfigParser
 from pathlib import Path
 from typing import List, Union
 
-from .storage import Storage
+from .storage import Storage, storage_registry
 
 
 class SectionConfig:
@@ -16,7 +16,7 @@ class SectionConfig:
     def section_name(self):
         return self.__name__[:-len('Config')].lower()
 
-    def parse(self, key, value):
+    def parse(self, section: ConfigParser):
         raise NotImplementedError()
 
 
@@ -26,12 +26,10 @@ class SourceConfig(SectionConfig):
     """
     includes: List[str]
     excludes: List[str]
-    root: Union[str, None] = None
 
     def parse(self, section: ConfigParser) -> None:
-        self.includes = section.get('include', [])
-        self.excludes = section.get('exclude', [])
-        self.root = section.get('root', None)
+        self.includes = section.get('include', '').split()
+        self.excludes = section.get('exclude', '').split()
 
         if not self.includes:
             raise ValueError(
@@ -47,16 +45,20 @@ class DestinationConfig(SectionConfig):
     password: Union[str, None]
 
     def parse(self, section: ConfigParser) -> None:
-        storage_type = section.get('storage', None)
-        self.password = section.get('password', None)
+        storage_type = section.get('storage', '')
+        self.password = section.get('password', '')
 
         if not storage_type:
             raise ValueError(
                 'The destination section must declare a storage type'
             )
 
-        # ++ TODO: Look up storage type in registry and get it to parse config
-        storage_cls = storage_registry.get_type(storage_type)
+        # Look up storage type in registry and get it to parse config
+        storage_cls = storage_registry.get(storage_type)
+        if not storage_cls:
+            raise ValueError(
+                f'The destination storage {storage_type} is not recognised'
+            )
         self.storage = storage_cls.from_config(section)
 
 
@@ -65,13 +67,9 @@ class IndexConfig(SectionConfig):
     Index config container
     """
     path: str
-    ownership: bool = True
-    permissions: bool = True
 
     def parse(self, section: ConfigParser) -> None:
         self.path = section.get('path', '')
-        self.ownership = section.get_boolean('ownership', True)
-        self.permissions = section.get_boolean('permissions', True)
 
         if not self.path:
             raise ValueError('The index section must declare a path')
@@ -96,8 +94,8 @@ class Config:
 
         if sorted(parser.sections()) != sorted(self.sections):
             raise ValueError(
-                'Invalid config file; must contain source, destination and'
-                f' index sections; instead found {', '.join(parser.sections())}'
+                'Invalid config file; must contain source, destination and '
+                f'index sections; instead found {", ".join(parser.sections())}'
             )
 
         self.source = SourceConfig()

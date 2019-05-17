@@ -1,6 +1,8 @@
 """
 Storage base class
 """
+from __future__ import annotations
+
 from configparser import ConfigParser
 from typing import Any, Dict
 
@@ -17,10 +19,14 @@ class StorageType(type):
 class Storage:
     __metaclass__ = StorageType
 
+    def __init__(self, **kwargs: Dict[str, Any]):
+        pass
+
     @classmethod
     def from_config(cls, config: ConfigParser) -> Storage:
-        kwargs: Dict[str: Any] = cls.parse_config(config)
+        kwargs: Dict[str, Any] = cls.parse_config(config)
         return cls(**kwargs)
 
+    @classmethod
     def parse_config(cls, config: ConfigParser) -> Dict[str, Any]:
         return {}

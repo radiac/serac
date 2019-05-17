@@ -37,7 +37,7 @@ To run tests::
 
     cd serac/repo
     . ../venv/bin/activate
-    pytest --flake8 --mypy --cov=serac --cov-report=term --cov-report=html
+    pytest
 
 
 Configuration
@@ -49,13 +49,12 @@ Configure serac using a config file::
     # Define the source for the backups
 
     # List of paths to include and exclude (glob patterns)
-    include = /path/to/source
-    include = /path/somewhere/else
-    exclude = /path/to/source/unprocessed
-    exclude = /path/somehwere/else/*.jpg
-
-    # Optional root path - defaults to the lowest common path between includes
-    root = /
+    include =
+        /path/to/source
+        /path/somewhere/else
+    exclude =
+        /path/to/source/unprocessed
+        /path/somehwere/else/*.jpg
 
     [destination]
     # Define where the backups are saved
@@ -80,7 +79,3 @@ Configure serac using a config file::
     # Location where indexes are stored
     # This should then be backed up by another service, eg duplicity
     path = /path/to/indexes
-
-    # Attributes to collect
-    ownership = yes
-    permissions = no
