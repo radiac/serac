@@ -5,9 +5,7 @@ from enum import IntEnum
 from hashlib import sha256
 from pathlib import Path
 
-from peewee import (
-    CharField, DateTimeField, IntegerField, ForeignKeyField, TextField,
-)
+from peewee import CharField, DateTimeField, IntegerField, ForeignKeyField, TextField
 
 from .database import Model, EnumField
 
@@ -25,6 +23,7 @@ class Stored(Model):
 
     Identified by a sha256 hash
     """
+
     hash = CharField(max_length=64)
 
 
@@ -32,8 +31,9 @@ class File(Model):
     """
     A file at a path
     """
+
     path = TextField()
-    stored = ForeignKeyField(Stored, backref='files')
+    stored = ForeignKeyField(Stored, backref="files")
     action = EnumField(Action)
     last_modified = DateTimeField()
     size = IntegerField()
@@ -70,7 +70,7 @@ class File(Model):
             # Specify how many bytes of the file you want to open at a time
             block_size = 65536
             sha = sha256()
-            with self.get_path().open('rb') as file:
+            with self.get_path().open("rb") as file:
                 file_buffer = file.read(block_size)
                 while len(file_buffer) > 0:
                     sha.update(file_buffer)
@@ -85,10 +85,10 @@ class File(Model):
         Check if path and metadata match
         """
         return not (
-            self.path == other.path and
-            self.last_modified == other.last_modified and
-            self.size == other.size and
-            self.owner == other.owner and
-            self.group == other.group and
-            self.permissions == other.permissions
+            self.path == other.path
+            and self.last_modified == other.last_modified
+            and self.size == other.size
+            and self.owner == other.owner
+            and self.group == other.group
+            and self.permissions == other.permissions
         )

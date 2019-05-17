@@ -17,6 +17,7 @@ class BaseTest:
 
     Simplifies using multiple base test classes on a single test class
     """
+
     def setup_method(self):
         pass
 
@@ -28,8 +29,9 @@ class DatabaseTest(BaseTest):
     """
     Base for test classes which use the database
     """
+
     def setup_method(self):
-        database.create_db(filename=':memory:')
+        database.create_db(filename=":memory:")
         super().setup_method()
 
     def teardown_method(self):
@@ -41,6 +43,7 @@ class FilesystemTest(BaseTest):
     """
     Base for test classes which use the file system
     """
+
     patcher = Patcher()
 
     def setup_method(self):
@@ -66,16 +69,13 @@ class MockDatabase:
                     name = CharField()
             FakeModel.create(name='test')
     """
+
     db_cls: Type[Database]
     filename: str
     test_db: Database
     main_db: Database
 
-    def __init__(
-        self,
-        db_cls: Database = SqliteDatabase,
-        filename: str = ':memory:',
-    ):
+    def __init__(self, db_cls: Database = SqliteDatabase, filename: str = ":memory:"):
         self.db_cls = db_cls
         self.filename = filename
 
@@ -111,23 +111,21 @@ class MockDatabase:
 
 
 def gen_stored(**kwargs):
-    attrs = dict(
-        hash='abc',
-    )
+    attrs = dict(hash="abc")
     attrs.update(kwargs)
     return models.Stored.create(**attrs)
 
 
 def gen_file(**kwargs):
-    stored = kwargs.get('stored')
+    stored = kwargs.get("stored")
     if not isinstance(stored, models.Stored):
         stored_attrs = {}
         if stored is not None:
-            stored_attrs['hash'] = stored
+            stored_attrs["hash"] = stored
         stored = gen_stored(**stored_attrs)
 
     attrs = dict(
-        path='/tmp/foo',
+        path="/tmp/foo",
         stored=stored,
         action=models.Action.ADD,
         last_modified=datetime.now(),

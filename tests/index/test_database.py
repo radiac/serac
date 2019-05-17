@@ -10,7 +10,8 @@ from ..mocks import MockDatabase
 
 def test_connect():
     with MockDatabase() as test_db:  # noqa
+
         class FakeModel(Model):
             name = CharField()
 
-    FakeModel.create(name='test')
+    FakeModel.create(name="test")

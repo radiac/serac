@@ -8,12 +8,7 @@ from enum import IntEnum
 from pathlib import Path
 from typing import Any, DefaultDict, Dict, List, Type
 
-from peewee import (
-    Database,
-    SqliteDatabase,
-    IntegerField,
-    Model as BaseModel,
-)
+from peewee import Database, SqliteDatabase, IntegerField, Model as BaseModel
 
 
 _db = SqliteDatabase(None)
@@ -34,7 +29,7 @@ def connect(filename: str, create: bool = False, database: Database = None):
         database = get_current_db()
 
     if not create and not Path(filename).is_file():
-        raise ValueError('Database does not exist')
+        raise ValueError("Database does not exist")
 
     database.init(filename)
     database.connect()
@@ -58,14 +53,15 @@ class ModelMeta(type(BaseModel)):  # type: ignore # see mypy #4284
     Metaclass wrapper for standard peewee model metaclass to automatically
     register a new model with the model registry
     """
+
     def __new__(cls, name, bases, attrs):
         # Ensure we've got a Meta class definition
-        if 'Meta' not in attrs:
-            attrs['Meta'] = type('Meta', (), {})
+        if "Meta" not in attrs:
+            attrs["Meta"] = type("Meta", (), {})
 
         # Set the database to the current db
-        if getattr(attrs['Meta'], 'database', None) is None:
-            setattr(attrs['Meta'], 'database', get_current_db())
+        if getattr(attrs["Meta"], "database", None) is None:
+            setattr(attrs["Meta"], "database", get_current_db())
 
         # Initialise metaclass as normal
         cls = super().__new__(cls, name, bases, attrs)
@@ -84,13 +80,11 @@ class EnumField(IntegerField):
     """
     Field for integer enums
     """
+
     enum: Type[IntEnum]
 
     def __init__(
-        self,
-        enum: Type[IntEnum],
-        *args: List[Any],
-        **kwargs: Dict[str, Any],
+        self, enum: Type[IntEnum], *args: List[Any], **kwargs: Dict[str, Any]
     ) -> None:
         super().__init__(*args, **kwargs)
         self.enum = enum

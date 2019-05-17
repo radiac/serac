@@ -17,6 +17,7 @@ class Changeset:
     """
     Set of changes from an index scan
     """
+
     added: Dict[str, File]
     content: Dict[str, File]
     meta: Dict[str, File]
@@ -31,11 +32,10 @@ class Changeset:
 
 def get_state_at(when: datetime) -> Dict[str, File]:
     file_fields = File._meta.sorted_fields + [
-        fn.MAX(File.last_modified).alias('latest_modified')
+        fn.MAX(File.last_modified).alias("latest_modified")
     ]
     files = (
-        File
-        .select(*file_fields)
+        File.select(*file_fields)
         .where(File.last_modified <= when)
         .group_by(File.path)
         .having(File.action != Action.DELETE)
@@ -48,12 +48,8 @@ def scan(includes: List[str], excludes: List[str]) -> Changeset:
     Scan specified path and return a Changeset
     """
     path_str: str
-    include_paths = chain(*[
-        iglob(path_str) for path_str in includes
-    ])
-    exclude_matches = chain(*[
-        iglob(path_str) for path_str in excludes
-    ])
+    include_paths = chain(*[iglob(path_str) for path_str in includes])
+    exclude_matches = chain(*[iglob(path_str) for path_str in excludes])
 
     changeset = Changeset()
     last_state = get_state_at(when=datetime.now())

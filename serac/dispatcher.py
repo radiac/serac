@@ -9,7 +9,7 @@ def create_db(config):
     Create a new database
     """
     if config.index.path.exists():
-        raise ValueError(f'Database {config.index.path} already exists')
+        raise ValueError(f"Database {config.index.path} already exists")
     database.create_db(config.index.path)
 
 

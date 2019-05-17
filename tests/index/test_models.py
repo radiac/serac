@@ -12,8 +12,9 @@ class TestDatabaseTest(DatabaseTest):
     """
     Test the DatabaseTest base class operates as expected
     """
+
     def test_create_first__object_is_only_item(self):
-        file = gen_file(path='/tmp/foo')
+        file = gen_file(path="/tmp/foo")
         files = File.select()
         assert len(files) == 1
         assert files[0].path == file.path
@@ -22,7 +23,7 @@ class TestDatabaseTest(DatabaseTest):
         """
         Ensure db is wiped between tests
         """
-        file = gen_file(path='/tmp/bar')
+        file = gen_file(path="/tmp/bar")
         files = File.select()
         assert len(files) == 1
         assert files[0].path == file.path
@@ -31,8 +32,8 @@ class TestDatabaseTest(DatabaseTest):
         now = datetime.now()
         earlier = now - timedelta(days=7)
 
-        file1 = gen_file(path='/tmp/foo', last_modified=earlier)
-        file2 = gen_file(path='/tmp/foo', last_modified=now)
+        file1 = gen_file(path="/tmp/foo", last_modified=earlier)
+        file2 = gen_file(path="/tmp/foo", last_modified=now)
         files = File.select()
         assert len(files) == 2
         assert list(files) == [file1, file2]

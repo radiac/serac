@@ -16,8 +16,7 @@ class S3(Storage):
     @classmethod
     def parse_config(cls, config: ConfigParser) -> Dict[str, Any]:
         kwargs = {
-            key: config.get(key, '')
-            for key in ['key', 'secret', 'bucket', 'path']
+            key: config.get(key, "") for key in ["key", "secret", "bucket", "path"]
         }
 
         return kwargs
@@ -29,6 +28,6 @@ class S3(Storage):
         self.path = path
 
         # Check required string values
-        for attr in ['key', 'secret', 'bucket']:
+        for attr in ["key", "secret", "bucket"]:
             if not getattr(self, attr):
-                raise ValueError(f'Local storage requires a {attr}')
+                raise ValueError(f"Local storage requires a {attr}")
