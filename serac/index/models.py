@@ -43,17 +43,27 @@ class File(Model):
 
     _cached_hash: str
 
+    def __str__(self):
+        return self.path
+
     def get_path(self):
         """
         Return a pathlib.Path for self.path
         """
-        return Path(self.path)
+        path = Path(self.path)
+        print(self.path)
+        return path
 
     def refresh_metadata_from_disk(self):
         """
         Update metadata by checking the path on disk
         """
-        stat = self.get_path().stat()
+        path = self.get_path()
+        if not path.exists():
+            raise ValueError(f"File {self.path} has disappeared")
+        if not path.is_file():
+            raise ValueError(f"File {self.path} is not a file")
+        stat = path.stat()
         self.last_modified = stat.st_mtime
         self.size = stat.st_size
         self.owner = stat.st_uid

@@ -3,10 +3,11 @@ Index management
 """
 from collections import defaultdict
 from datetime import datetime
+from fnmatch import fnmatchcase
 from glob import iglob
 from itertools import chain
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, Iterator, List
 
 from peewee import fn
 
@@ -43,36 +44,47 @@ def get_state_at(when: datetime) -> Dict[str, File]:
     return {file.path: file for file in files}
 
 
+def is_excluded(path: str, excludes: List[str]) -> bool:
+    for pattern in excludes:
+        if fnmatchcase(path, pattern):
+            return True
+    return False
+
+
 def scan(includes: List[str], excludes: List[str]) -> Changeset:
     """
     Scan specified path and return a Changeset
     """
     path_str: str
-    include_paths = chain(*[iglob(path_str) for path_str in includes])
-    exclude_matches = chain(*[iglob(path_str) for path_str in excludes])
+    include_paths: Iterator[Path] = chain.from_iterable(
+        ((Path(globbed) for globbed in iglob(path_str)) for path_str in includes)
+    )
 
     changeset = Changeset()
     last_state = get_state_at(when=datetime.now())
 
     path: Path
     while True:
-        # Get next valid path
+        # Get next path
         try:
-            path_str = next(include_paths)
+            path = next(include_paths)
         except StopIteration:
             break
-        if path_str in exclude_matches:
+        else:
+            path_str = str(path)
+
+        # Run exclusions
+        if is_excluded(path_str, excludes):
             continue
 
         # Examine path
-        path = Path(path_str)
         if path.is_dir():
             # Valid path, but we don't index dirs themselves - search it
-            include_paths = chain(include_paths, [path_str])
+            include_paths = chain(include_paths, path.iterdir())
             continue
 
         # Create File and collect metadata
-        file = File(path=path)
+        file = File(path=path_str)
         file.refresh_metadata_from_disk()
 
         # Diff path against last_state (removing so we know we've seen it)
