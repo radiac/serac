@@ -4,7 +4,9 @@ Storage base class
 from __future__ import annotations
 
 from configparser import ConfigParser
-from typing import Any, Dict
+from typing import Any, BinaryIO, Dict
+
+from ..crypto import encrypt, decrypt
 
 
 storage_registry = {}
@@ -30,3 +32,36 @@ class Storage:
     @classmethod
     def parse_config(cls, config: ConfigParser) -> Dict[str, Any]:
         return {}
+
+    def store(self, local_path: str, id: int, password: str):
+        source: BinaryIO
+        with open(local_path, "rb") as source:
+            destination = self.write(str(id))
+            encrypt(source=source, destination=destination, password=password)
+            destination.close()
+
+    def retrieve(self, local_path: str, id: int, password: str):
+        source_size = self.get_size(str(id))
+        source = self.read(str(id))
+        destination: BinaryIO
+        with open(local_path, "wb") as destination:
+            decrypt(source, destination, password, source_size)
+        source.close()
+
+    def get_size(self, filename: str) -> int:
+        """
+        Return the size of the file
+        """
+        raise NotImplementedError("Storage.get_size must be implemented by subclasses")
+
+    def read(self, filename: str) -> BinaryIO:
+        """
+        Return an IO object to read from
+        """
+        raise NotImplementedError("Storage.read must be implemented by subclasses")
+
+    def write(self, filename: str) -> BinaryIO:
+        """
+        Return an IO object to write to
+        """
+        raise NotImplementedError("Storage.write must be implemented by subclasses")

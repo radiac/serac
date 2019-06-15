@@ -3,6 +3,8 @@ Test serac/index/models.py
 """
 from datetime import datetime, timedelta
 
+from serac.config import DestinationConfig
+from serac.storage import Local
 from serac.index.models import File
 
 from ..mocks import DatabaseTest, gen_file
@@ -37,3 +39,32 @@ class TestDatabaseTest(DatabaseTest):
         files = File.select()
         assert len(files) == 2
         assert list(files) == [file1, file2]
+
+
+def TestFile(DatabaseTest, FilesystemTest):
+    """
+    Test the File model
+    """
+
+    def test_metadata(self, fs):
+        fs.create_file("/tmp/foo", contents="unencrypted")
+        file = File(path="/tmp/foo")
+        file.refresh_metadata_from_disk()
+        assert file.size == len("unencrypted")
+        # ++ TODO: Test other attributes:
+        #   freeze time and check last modified
+        #   set uid and gid
+
+    def test_archive(self, fs):
+        fs.create_file("/src/foo", contents="unencrypted")
+        file = File(path="/src/foo")
+        destination_config = DestinationConfig(
+            storage=Local(path="/dest/"), password="secret"
+        )
+        file.archive(destination_config)
+
+        # ++ TODO
+        # Check Archived db object exists
+        # Check file exists in/dest/
+        # Check it has been encrypted
+        # Check we can decrypt it

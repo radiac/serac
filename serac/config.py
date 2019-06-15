@@ -1,26 +1,37 @@
 """
 Config parsing
 """
-from configparser import ConfigParser
+from __future__ import annotations
+
+from configparser import ConfigParser, SectionProxy
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Union
+from typing import Any, Dict, List, Type, TypeVar
 
 from .storage import Storage, storage_registry
 
 
+T = TypeVar("T", bound="SectionConfig")
+
+
+@dataclass
 class SectionConfig:
     """
     Base for section config objects
     """
 
-    @property
-    def section_name(self):
-        return self.__name__[: -len("Config")].lower()
+    @classmethod
+    def from_config(cls: Type[T], config: SectionProxy) -> T:
+        kwargs: Dict[str, Any] = cls.parse_config(config)
+        # mypy has a problem with dataclasses, so ignore the typing error
+        return cls(**kwargs)  # type: ignore
 
-    def parse(self, section: ConfigParser):
+    @classmethod
+    def parse_config(self, section: SectionProxy) -> Dict[str, Any]:
         raise NotImplementedError()
 
 
+@dataclass
 class SourceConfig(SectionConfig):
     """
     Source config container
@@ -29,25 +40,30 @@ class SourceConfig(SectionConfig):
     includes: List[str]
     excludes: List[str]
 
-    def parse(self, section: ConfigParser) -> None:
-        self.includes = section.get("include", "").split()
-        self.excludes = section.get("exclude", "").split()
+    @classmethod
+    def parse_config(self, section: SectionProxy) -> Dict[str, Any]:
+        includes = section.get("include", "").split()
+        excludes = section.get("exclude", "").split()
 
-        if not self.includes:
+        if not includes:
             raise ValueError("The source section must declare at least one include")
 
+        return {"includes": includes, "excludes": excludes}
 
+
+@dataclass
 class DestinationConfig(SectionConfig):
     """
     Destination config container
     """
 
     storage: Storage
-    password: Union[str, None]
+    password: str
 
-    def parse(self, section: ConfigParser) -> None:
+    @classmethod
+    def parse_config(self, section: SectionProxy) -> Dict[str, Any]:
         storage_type = section.get("storage", "")
-        self.password = section.get("password", "")
+        password = section.get("password", "")
 
         if not storage_type:
             raise ValueError("The destination section must declare a storage type")
@@ -58,9 +74,12 @@ class DestinationConfig(SectionConfig):
             raise ValueError(
                 f"The destination storage {storage_type} is not recognised"
             )
-        self.storage = storage_cls.from_config(section)
+        storage = storage_cls.from_config(section)
+
+        return {"storage": storage, "password": password}
 
 
+@dataclass
 class IndexConfig(SectionConfig):
     """
     Index config container
@@ -68,11 +87,14 @@ class IndexConfig(SectionConfig):
 
     path: str
 
-    def parse(self, section: ConfigParser) -> None:
-        self.path = section.get("path", "")
+    @classmethod
+    def parse_config(self, section: SectionProxy) -> Dict[str, Any]:
+        path = section.get("path", "")
 
-        if not self.path:
+        if not path:
             raise ValueError("The index section must declare a path")
+
+        return {"path": path}
 
 
 class Config:
@@ -99,8 +121,6 @@ class Config:
                 f'index sections; instead found {", ".join(parser.sections())}'
             )
 
-        self.source = SourceConfig()
-        self.destination = DestinationConfig()
-        self.index = IndexConfig()
-        for section in self.sections:
-            getattr(self, section).parse(parser[section])
+        self.source = SourceConfig.from_config(parser["Source"])
+        self.destination = DestinationConfig.from_config(parser["Destination"])
+        self.index = IndexConfig.from_config(parser["Index"])

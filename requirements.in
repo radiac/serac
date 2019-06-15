@@ -11,3 +11,5 @@ typing_extensions
 
 # Deployment
 peewee
+pyAesCrypt
+smart-open

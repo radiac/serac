@@ -2,11 +2,14 @@
 Mock objects
 """
 from datetime import datetime
+from pathlib import Path
+import shutil
 from typing import Type
 
 from peewee import Database, SqliteDatabase
-from pyfakefs.fake_filesystem_unittest import Patcher
 
+from serac import storage
+from serac.config import DestinationConfig
 from serac.index import database
 from serac.index import models
 
@@ -44,15 +47,60 @@ class FilesystemTest(BaseTest):
     Base for test classes which use the file system
     """
 
-    patcher = Patcher()
+    def mock_fs(self, fs):
+        """
+        Create mock filesystem ready for testing against
+        """
+        fs.create_file("/src/one.txt", contents="one")
+        fs.create_file("/src/two.txt", contents="two")
+        fs.create_file("/src/dir/three.txt", contents="three")
+        fs.create_file("/src/dir/four.txt", contents="four")
+        fs.create_file("/src/dir/subdir/five.txt", contents="five")
+        fs.create_file("/alt/six.txt", contents="six")
+        fs.create_file("/alt/seven.txt", contents="seven")
+
+    def get_destination(self):
+        return DestinationConfig(
+            storage=storage.Local(path="/dest/"), password="secret"
+        )
+
+
+class LiveFilesystemTest(BaseTest):
+    """
+    Base for test classes which use the real file system
+    """
+
+    TEST_ROOT = Path.cwd()
+    TEST_PATH = TEST_ROOT / "serac-fs-test"
 
     def setup_method(self):
-        self.patcher.setUp()
         super().setup_method()
 
+        assert self.TEST_ROOT.is_dir()
+        assert not self.TEST_PATH.is_dir()
+        self.TEST_PATH.mkdir(exist_ok=False)
+
+    def mock_fs(self):
+        self.create_file("src/one.txt", contents="one")
+        self.create_file("src/two.txt", contents="two")
+        self.create_file("src/dir/three.txt", contents="three")
+        self.create_file("src/dir/four.txt", contents="four")
+        self.create_file("src/dir/subdir/five.txt", contents="five")
+        self.create_file("alt/six.txt", contents="six")
+        self.create_file("alt/seven.txt", contents="seven")
+
+    def create_file(self, filename: str, contents: str) -> None:
+        path = self.TEST_PATH / filename
+        path.parent.mkdir(exist_ok=True)
+        with path.open(mode="w") as file:
+            file.write(contents)
+
+    def get_path(self, filename: str) -> Path:
+        return self.TEST_PATH / filename
+
     def teardown_method(self):
-        self.patcher.tearDown()
         super().teardown_method()
+        shutil.rmtree(self.TEST_PATH)
 
 
 class MockDatabase:
@@ -110,29 +158,33 @@ class MockDatabase:
         del database.models[self.test_db]
 
 
-def gen_stored(**kwargs):
-    attrs = dict(hash="abc")
+def gen_archived(**kwargs):
+    attrs = dict(hash="abc", size=123)
     attrs.update(kwargs)
-    return models.Stored.create(**attrs)
+    return models.Archived.create(**attrs)
 
 
 def gen_file(**kwargs):
-    stored = kwargs.get("stored")
-    if not isinstance(stored, models.Stored):
-        stored_attrs = {}
-        if stored is not None:
-            stored_attrs["hash"] = stored
-        stored = gen_stored(**stored_attrs)
+    archived = kwargs.get("archived")
+    if not isinstance(archived, models.Archived):
+        archived_attrs = {}
+        if archived is not None:
+            archived_attrs["hash"] = archived
+        archived = gen_archived(**archived_attrs)
 
     attrs = dict(
         path="/tmp/foo",
-        stored=stored,
+        archived=archived,
         action=models.Action.ADD,
         last_modified=datetime.now(),
-        size=12345,
         owner=1000,
         group=1000,
         permissions=644,
     )
     attrs.update(kwargs)
     return models.File.create(**attrs)
+
+
+def mock_file_archive(self: models.File, hash: str = "hash") -> None:
+    self.archived = models.Archived.create(hash=self.calculate_hash(), size=self.size)
+    self.save()

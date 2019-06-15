@@ -1,17 +1,22 @@
 """
 Index management
 """
+from __future__ import annotations
+
 from collections import defaultdict
 from datetime import datetime
 from fnmatch import fnmatchcase
 from glob import iglob
 from itertools import chain
 from pathlib import Path
-from typing import Dict, Iterator, List
+from typing import Dict, Iterator, List, Optional
 
 from peewee import fn
 
-from .models import Action, File
+from .models import Action, File, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..config import DestinationConfig
 
 
 class Changeset:
@@ -21,14 +26,21 @@ class Changeset:
 
     added: Dict[str, File]
     content: Dict[str, File]
-    meta: Dict[str, File]
+    metadata: Dict[str, File]
     deleted: Dict[str, File]
 
     def __init__(self):
         self.added = defaultdict(File)
         self.content = defaultdict(File)
-        self.meta = defaultdict(File)
+        self.metadata = defaultdict(File)
         self.deleted = defaultdict(File)
+
+    def commit(self, destination: DestinationConfig):
+        for file in chain(self.metadata.values(), self.deleted.values()):
+            file.save()
+
+        for file in chain(self.added.values(), self.content.values()):
+            file.archive(destination)
 
 
 def get_state_at(when: datetime) -> Dict[str, File]:
@@ -51,11 +63,14 @@ def is_excluded(path: str, excludes: List[str]) -> bool:
     return False
 
 
-def scan(includes: List[str], excludes: List[str]) -> Changeset:
+def scan(includes: List[str], excludes: Optional[List[str]] = None) -> Changeset:
     """
     Scan specified path and return a Changeset
     """
+    path: Path
     path_str: str
+    file: File
+
     include_paths: Iterator[Path] = chain.from_iterable(
         ((Path(globbed) for globbed in iglob(path_str)) for path_str in includes)
     )
@@ -63,7 +78,6 @@ def scan(includes: List[str], excludes: List[str]) -> Changeset:
     changeset = Changeset()
     last_state = get_state_at(when=datetime.now())
 
-    path: Path
     while True:
         # Get next path
         try:
@@ -74,7 +88,7 @@ def scan(includes: List[str], excludes: List[str]) -> Changeset:
             path_str = str(path)
 
         # Run exclusions
-        if is_excluded(path_str, excludes):
+        if excludes and is_excluded(path_str, excludes):
             continue
 
         # Examine path
@@ -91,6 +105,7 @@ def scan(includes: List[str], excludes: List[str]) -> Changeset:
         last_file = last_state.pop(path_str, None)
         if last_file is None:
             # Added
+            file.action = Action.ADD
             changeset.added[path_str] = file
 
         elif file.has_metadata_changed(last_file):
@@ -98,13 +113,19 @@ def scan(includes: List[str], excludes: List[str]) -> Changeset:
 
             # If last_modified changed, check the hash
             file_hash = file.calculate_hash()
-            if file_hash != last_file.stored.hash:
+            if file_hash != last_file.archived.hash:
                 # Content has changed
+                file.action = Action.CONTENT
                 changeset.content[path_str] = file
             else:
                 # Just metadata
-                changeset.meta[path_str] = file
+                file.action = Action.METADATA
+                file.archived = last_file.archived
+                changeset.metadata[path_str] = file
 
-    # All remaining files in the state were deletd
-    changeset.deleted = last_state
+    # All remaining files in the state were deleted
+    changeset.deleted = {
+        path_str: file.clone(action=Action.DELETE)
+        for path_str, file in last_state.items()
+    }
     return changeset
