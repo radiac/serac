@@ -54,7 +54,7 @@ Configure serac using a config file::
         /path/somewhere/else
     exclude =
         /path/to/source/unprocessed
-        /path/somehwere/else/*.jpg
+        /path/somewhere/else/*.jpg
 
     [destination]
     # Define where the backups are saved
@@ -65,10 +65,10 @@ Configure serac using a config file::
 
     # Backup to S3
     storage = s3
-    s3_key = 4p1_k3y
-    s3_secret = 53cr3t
-    s3_bucket = arn:aws:s3:::my_bucket_name
-    s3_path = path/within/bucket
+    key = 4p1_k3y
+    secret = 53cr3t
+    bucket = arn:aws:s3:::my_bucket_name
+    path = path/within/bucket
 
     # Encrypt backups with this password
     password = l0ng_s3cr3t

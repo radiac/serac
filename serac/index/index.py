@@ -108,7 +108,7 @@ def scan(includes: List[str], excludes: Optional[List[str]] = None) -> Changeset
             file.action = Action.ADD
             changeset.added[path_str] = file
 
-        elif file.has_metadata_changed(last_file):
+        elif file != last_file:
             # Something changed
 
             # If last_modified changed, check the hash

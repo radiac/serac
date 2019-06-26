@@ -8,6 +8,7 @@ pytest-cov
 pytest-flake8
 pytest-mypy
 typing_extensions
+-e git+https://github.com/radiac/pytest-freezegun.git@bugfix/class-based-tests-with-duration-regression#egg=pytest-freezegun
 
 # Deployment
 peewee

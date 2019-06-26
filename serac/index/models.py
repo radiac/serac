@@ -69,10 +69,14 @@ class File(Model):
     def clone(self, **overrides) -> File:
         # Copy all field values
         attrs: Dict[str, Any] = {
-            field_name: field
-            for field_name, field in File._meta.fields.items()
-            if not field_name == "id"
+            field_name: getattr(self, field_name)
+            for field_name in File._meta.fields.keys()
+            if field_name not in ["id", "archived"]
         }
+        try:
+            attrs["archived"] = self.archived
+        except Archived.DoesNotExist:
+            pass
         attrs.update(overrides)
         return File(**attrs)
 
@@ -102,23 +106,19 @@ class File(Model):
     @property
     def size(self):
         if self._size is None:
-            if self.archived:
-                return self.archived.size
-            raise ValueError("Cannot access size without a lookup")
+            try:
+                if self.archived:
+                    return self.archived.size
+            except Archived.DoesNotExist:
+                raise ValueError("Cannot access size without a metadata")
         return self._size
 
-    def has_metadata_changed(self, other):
+    def __eq__(self, other):
         """
         Check if path and metadata match
         """
-        return not (
-            self.path == other.path
-            and all(
-                [
-                    getattr(self, attr) == getattr(other, attr)
-                    for attr in self._meta_fields
-                ]
-            )
+        return self.path == other.path and all(
+            [getattr(self, attr) == getattr(other, attr) for attr in self._meta_fields]
         )
 
     def calculate_hash(self, force=False):

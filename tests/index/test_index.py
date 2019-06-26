@@ -120,6 +120,7 @@ class TestIndexScan(DatabaseTest, FilesystemTest):
         Path("/src/one.txt").write_text("one updated")
         Path("/src/dir/three.txt").write_text("three updated")
         changeset = scan(includes=["/src"])
+        changeset.commit(destination=self.get_destination())
 
         assert len(changeset.added.keys()) == 0
         assert len(changeset.content.keys()) == 2
@@ -138,6 +139,7 @@ class TestIndexScan(DatabaseTest, FilesystemTest):
         Path("/src/one.txt").chmod(0o444)
         os.chown("/src/dir/three.txt", 1, 1)
         changeset = scan(includes=["/src"])
+        changeset.commit(destination=self.get_destination())
 
         assert len(changeset.added.keys()) == 0
         assert len(changeset.content.keys()) == 0
@@ -156,6 +158,7 @@ class TestIndexScan(DatabaseTest, FilesystemTest):
         Path("/src/one.txt").unlink()
         Path("/src/dir/three.txt").unlink()
         changeset = scan(includes=["/src"])
+        changeset.commit(destination=self.get_destination())
 
         assert len(changeset.added.keys()) == 0
         assert len(changeset.content.keys()) == 0

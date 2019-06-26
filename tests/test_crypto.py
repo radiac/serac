@@ -1,19 +1,13 @@
 """
 Test serac/crypto.py
 """
-import os
 from pathlib import Path
-
-import pytest
 
 from serac.crypto import encrypt, decrypt
 
 from .mocks import FilesystemTest
 
 
-@pytest.mark.skipif(
-    not os.getenv("TEST_CRYPTO", ""), reason="Not running crypto integration tests"
-)
 class TestCrypto(FilesystemTest):
     """
     Test Crypto operations

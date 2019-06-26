@@ -72,7 +72,7 @@ class DestinationConfig(SectionConfig):
         storage_cls = storage_registry.get(storage_type)
         if not storage_cls:
             raise ValueError(
-                f"The destination storage {storage_type} is not recognised"
+                f"The destination storage '{storage_type}' is not recognised"
             )
         storage = storage_cls.from_config(section)
 
@@ -121,6 +121,6 @@ class Config:
                 f'index sections; instead found {", ".join(parser.sections())}'
             )
 
-        self.source = SourceConfig.from_config(parser["Source"])
-        self.destination = DestinationConfig.from_config(parser["Destination"])
-        self.index = IndexConfig.from_config(parser["Index"])
+        self.source = SourceConfig.from_config(parser["source"])
+        self.destination = DestinationConfig.from_config(parser["destination"])
+        self.index = IndexConfig.from_config(parser["index"])

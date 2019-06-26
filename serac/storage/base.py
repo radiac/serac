@@ -15,11 +15,14 @@ storage_registry = {}
 class StorageType(type):
     def __init__(cls, name, bases, attrs):
         super().__init__(name, bases, attrs)
-        storage_registry[name] = cls
+        if attrs.get("abstract", False):
+            return
+        storage_registry[name.lower()] = cls
 
 
-class Storage:
-    __metaclass__ = StorageType
+class Storage(metaclass=StorageType):
+
+    abstract = True
 
     def __init__(self, **kwargs: Dict[str, Any]):
         pass

@@ -33,7 +33,7 @@ class S3(Storage):
         # Check required string values
         for attr in ["key", "secret", "bucket"]:
             if not getattr(self, attr):
-                raise ValueError(f"Local storage requires a {attr}")
+                raise ValueError(f"S3 storage requires a {attr}")
 
     def get_s3_path(self, filename: str):
         return f"s3://{self.key}:{self.secret}@{self.bucket}/{self.path}/{filename}"
