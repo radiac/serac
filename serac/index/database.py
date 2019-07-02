@@ -4,11 +4,12 @@ Database object
 from __future__ import annotations
 
 from collections import defaultdict
+from contextlib import contextmanager
 from enum import IntEnum
 from pathlib import Path
 from typing import Any, DefaultDict, Dict, List, Type
 
-from peewee import Database, SqliteDatabase, IntegerField, Model as BaseModel
+from peewee import Database, SqliteDatabase, IntegerField, TextField, Model as BaseModel
 
 
 _db = SqliteDatabase(None)
@@ -24,21 +25,21 @@ def get_current_db():
     return _db
 
 
-def connect(filename: str, create: bool = False, database: Database = None):
+def connect(path: Path, create: bool = False, database: Database = None):
     if database is None:
         database = get_current_db()
 
-    if not create and not Path(filename).is_file():
+    if not create and not path.is_file():
         raise ValueError("Database does not exist")
 
-    database.init(filename)
+    database.init(str(path))
     database.connect()
     if create:
         database.create_tables(models[database])
 
 
-def create_db(filename: str, database: Database = None) -> None:
-    connect(filename, create=True, database=database)
+def create_db(path: Path, database: Database = None) -> None:
+    connect(path, create=True, database=database)
 
 
 def disconnect(database: Database = None) -> None:
@@ -46,6 +47,13 @@ def disconnect(database: Database = None) -> None:
         database = get_current_db()
 
     database.close()
+
+
+@contextmanager
+def db(path: Path, create: bool = False, database: Database = None):
+    connect(path, create, database)
+    yield
+    disconnect()
 
 
 class ModelMeta(type(BaseModel)):  # type: ignore # see mypy #4284
@@ -94,3 +102,15 @@ class EnumField(IntegerField):
 
     def python_value(self, value: int) -> IntEnum:
         return self.enum(value)
+
+
+class PathField(TextField):
+    """
+    Field for Path objects
+    """
+
+    def db_value(self, value: Path) -> str:
+        return str(value)
+
+    def python_value(self, value: str) -> Path:
+        return Path(value)

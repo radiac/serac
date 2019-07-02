@@ -4,7 +4,7 @@ Local storage
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, BinaryIO, Dict, TYPE_CHECKING
+from typing import Any, Dict, IO, TYPE_CHECKING
 
 from .base import Storage
 
@@ -21,22 +21,22 @@ class Local(Storage):
 
     @classmethod
     def parse_config(cls, config: ConfigParser) -> Dict[str, Any]:
-        return {"path": config.get("path", "")}
+        return {"path": Path(config.get("path", ""))}
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: Path) -> None:
         if not path:
             raise ValueError("Local storage requires a path")
 
-        self.path = Path(path)
+        self.path = path
 
-    def get_size(self, filename: str) -> int:
-        file: Path = self.path / filename
+    def get_size(self, archive_id: str) -> int:
+        file: Path = self.path / archive_id
         return file.stat().st_size
 
-    def read(self, filename: str) -> BinaryIO:
-        handle: BinaryIO = open(self.path / filename, "rb")
+    def read(self, archive_id: str) -> IO[bytes]:
+        handle: IO[bytes] = open(self.path / archive_id, "rb")
         return handle
 
-    def write(self, filename: str) -> BinaryIO:
-        handle: BinaryIO = open(self.path / filename, "wb")
+    def write(self, archive_id: str) -> IO[bytes]:
+        handle: IO[bytes] = open(self.path / archive_id, "wb")
         return handle

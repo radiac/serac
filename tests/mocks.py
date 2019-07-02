@@ -34,7 +34,7 @@ class DatabaseTest(BaseTest):
     """
 
     def setup_method(self):
-        database.create_db(filename=":memory:")
+        database.create_db(path=Path(":memory:"))
         super().setup_method()
 
     def teardown_method(self):
@@ -61,7 +61,7 @@ class FilesystemTest(BaseTest):
 
     def get_destination(self):
         return DestinationConfig(
-            storage=storage.Local(path="/dest/"), password="secret"
+            storage=storage.Local(path=Path("/dest/")), password="secret"
         )
 
 
@@ -119,13 +119,15 @@ class MockDatabase:
     """
 
     db_cls: Type[Database]
-    filename: str
+    path: Path
     test_db: Database
     main_db: Database
 
-    def __init__(self, db_cls: Database = SqliteDatabase, filename: str = ":memory:"):
+    def __init__(
+        self, db_cls: Database = SqliteDatabase, path: Path = Path(":memory:")
+    ):
         self.db_cls = db_cls
-        self.filename = filename
+        self.path = path
 
     def __enter__(self) -> Database:
         """
@@ -144,7 +146,7 @@ class MockDatabase:
         * creating test db
         * switching back to main db
         """
-        database.create_db(filename=self.filename, database=self.test_db)
+        database.create_db(path=self.path, database=self.test_db)
         database.set_current_db(self.main_db)
 
     def __del__(self):
@@ -182,6 +184,7 @@ def gen_file(**kwargs):
         permissions=644,
     )
     attrs.update(kwargs)
+    attrs["path"] = Path(attrs["path"])
     return models.File.create(**attrs)
 
 

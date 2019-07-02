@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional, Union, TYPE_CHECKING
 
 from peewee import CharField, DateTimeField, IntegerField, ForeignKeyField, TextField
 
-from .database import Model, EnumField
+from .database import Model, EnumField, PathField
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -40,7 +40,7 @@ class File(Model):
     A file at a path
     """
 
-    path: Union[TextField, str] = TextField()
+    path: Union[PathField, Path] = PathField()
     archived: Union[ForeignKeyField, Archived] = ForeignKeyField(
         Archived, backref="files"
     )
@@ -64,7 +64,7 @@ class File(Model):
     _size: Optional[int] = None
 
     def __str__(self):
-        return self.path
+        return str(self.path)
 
     def clone(self, **overrides) -> File:
         # Copy all field values
@@ -80,23 +80,15 @@ class File(Model):
         attrs.update(overrides)
         return File(**attrs)
 
-    def get_path(self):
-        """
-        Return a pathlib.Path for self.path
-        """
-        path = Path(self.path)
-        return path
-
     def refresh_metadata_from_disk(self):
         """
         Update metadata by checking the path on disk
         """
-        path = self.get_path()
-        if not path.exists():
+        if not self.path.exists():
             raise ValueError(f"File {self.path} has disappeared")
-        if not path.is_file():
+        if not self.path.is_file():
             raise ValueError(f"File {self.path} is not a file")
-        stat = path.stat()
+        stat = self.path.stat()
         self.last_modified = stat.st_mtime
         self._size = stat.st_size
         self.owner = stat.st_uid
@@ -131,7 +123,7 @@ class File(Model):
             # Specify how many bytes of the file you want to open at a time
             block_size = 65536
             sha = sha256()
-            with self.get_path().open("rb") as file:
+            with self.path.open("rb") as file:
                 file_buffer = file.read(block_size)
                 while len(file_buffer) > 0:
                     sha.update(file_buffer)
@@ -154,12 +146,14 @@ class File(Model):
         try:
             # Store the file
             destination.storage.store(
-                local_path=self.path, id=archived.id, password=destination.password
+                local_path=self.path,
+                archive_id=str(archived.id),
+                password=destination.password,
             )
 
         except Exception as e:
             # Null the Archived hash rather than delete it, to prevent it being reused
-            archived.hash = None
+            archived.hash = ""
             archived.save()
 
             # Remove this entry from the database to allow it to be re-run
@@ -172,3 +166,13 @@ class File(Model):
             # Link archived object to this file
             self.archived = archived
             self.save()
+
+    def restore(self, destination: DestinationConfig, to: Path):
+        """
+        Restore from the archive
+        """
+        destination.storage.retrieve(
+            local_path=to,
+            archive_id=str(self.archived.id),
+            password=destination.password,
+        )

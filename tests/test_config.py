@@ -52,6 +52,8 @@ path = path/within/bucket
 
 def test_parser_source(fs):
     fs.create_file("/sample.conf", contents=SAMPLE.format(storage=storage_local))
+    fs.create_dir("/path/to/indexes")
+    fs.create_dir("/path/to/backup")
     config = Config(path=Path("/sample.conf"))
 
     assert isinstance(config.source, SourceConfig)
@@ -64,6 +66,8 @@ def test_parser_source(fs):
 
 def test_parser_destimation__local(fs):
     fs.create_file("/sample.conf", contents=SAMPLE.format(storage=storage_local))
+    fs.create_dir("/path/to/indexes")
+    fs.create_dir("/path/to/backup")
     config = Config(path=Path("/sample.conf"))
 
     assert isinstance(config.destination, DestinationConfig)
@@ -74,6 +78,7 @@ def test_parser_destimation__local(fs):
 
 def test_parser_destimation__s3(fs):
     fs.create_file("/sample.conf", contents=SAMPLE.format(storage=storage_s3))
+    fs.create_dir("/path/to/indexes")
     config = Config(path=Path("/sample.conf"))
 
     assert isinstance(config.destination, DestinationConfig)
@@ -87,7 +92,9 @@ def test_parser_destimation__s3(fs):
 
 def test_parser_index(fs):
     fs.create_file("/sample.conf", contents=SAMPLE.format(storage=storage_local))
+    fs.create_dir("/path/to/indexes")
+    fs.create_dir("/path/to/backup")
     config = Config(path=Path("/sample.conf"))
 
     assert isinstance(config.index, IndexConfig)
-    assert config.index.path == "/path/to/indexes"
+    assert config.index.path == Path("/path/to/indexes")

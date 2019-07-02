@@ -60,7 +60,7 @@ class TestFile(DatabaseTest, FilesystemTest):
         fake_filesystem.set_uid(uid)
         fake_filesystem.set_gid(gid)
         fs.create_file("/tmp/foo", contents="unencrypted")
-        file = File(path="/tmp/foo")
+        file = File(path=Path("/tmp/foo"))
 
         file.refresh_metadata_from_disk()
         assert file.size == len("unencrypted")
@@ -73,13 +73,13 @@ class TestFile(DatabaseTest, FilesystemTest):
         frozen_time = datetime(2001, 1, 1, 1, 1, 1)
         freezer.move_to(frozen_time)
         fake_file = fs.create_file("/tmp/foo", contents="unencrypted")
-        file = File(path="/tmp/foo")
+        file = File(path=Path("/tmp/foo"))
         file.refresh_metadata_from_disk()
 
         # Modify file
         frozen_time_modified = datetime(2001, 1, 1, 1, 1, 2)
         freezer.move_to(frozen_time)
-        with file.get_path().open("w") as handle:
+        with file.path.open("w") as handle:
             handle.write("modified")
         fake_file.st_mtime = datetime.timestamp(frozen_time_modified)
         file_modified = file.clone()
@@ -93,9 +93,9 @@ class TestFile(DatabaseTest, FilesystemTest):
     def test_archive(self, fs):
         fs.create_file("/src/foo", contents="unencrypted")
         fs.create_dir("/dest")
-        file = File(path="/src/foo", action=Action.ADD)
+        file = File(path=Path("/src/foo"), action=Action.ADD)
         destination_config = DestinationConfig(
-            storage=Local(path="/dest/"), password="secret"
+            storage=Local(path=Path("/dest/")), password="secret"
         )
         file.refresh_metadata_from_disk()
         file.archive(destination_config)
@@ -115,3 +115,22 @@ class TestFile(DatabaseTest, FilesystemTest):
         with dest_path.open("rb") as handle:
             crypto.decrypt(handle, decrypted, "secret", dest_path.stat().st_size)
         assert str(decrypted.getvalue(), "utf-8") == "unencrypted"
+
+    def test_restore(self, fs):
+        destination_config = DestinationConfig(
+            storage=Local(path=Path("/dest/")), password="secret"
+        )
+
+        # Create an archived file
+        fs.create_file("/src/foo", contents="unencrypted")
+        fs.create_dir("/dest")
+        file = File(path=Path("/src/foo"), action=Action.ADD)
+        file.refresh_metadata_from_disk()
+        file.archive(destination_config)
+
+        # Now check we can restore it
+        fs.create_dir("/restore")
+        file.restore(destination_config, to=Path("/restore/file"))
+        decrypted = Path("/restore/file")
+        with decrypted.open("r") as handle:
+            assert handle.read() == "unencrypted"

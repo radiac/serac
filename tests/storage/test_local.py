@@ -15,13 +15,15 @@ class TestLocal(FilesystemTest):
         # This will be tested in a separate test, but we'll focus on the store aspect
         fs.create_file("/src/foo", contents="unencrypted")
         fs.create_dir("/store")
-        storage = Local(path="/store/")
+        storage = Local(path=Path("/store/"))
 
         # Encrypt and push to storage
-        storage.store(local_path="/src/foo", id="1", password="secret")
+        storage.store(
+            local_path=Path("/src/foo"), archive_id=str("1"), password="secret"
+        )
 
         # Check file exists in /store/
-        dest_path = Path(f"/store/1")
+        dest_path = Path("/store/1")
         assert dest_path.is_file()
 
         # Check it has been encrypted and we can decrypt it
@@ -35,14 +37,16 @@ class TestLocal(FilesystemTest):
         fs.create_file("/src/foo", contents="unencrypted")
         fs.create_dir("/store")
         fs.create_dir("/dest")
-        storage = Local(path="/store/")
-        storage.store(local_path="/src/foo", id=1, password="secret")
+        storage = Local(path=Path("/store/"))
+        storage.store(local_path=Path("/src/foo"), archive_id=str(1), password="secret")
 
         # Pull and decrypt from storage
-        storage.retrieve(local_path="/dest/bar", id=1, password="secret")
+        storage.retrieve(
+            local_path=Path("/dest/bar"), archive_id=str(1), password="secret"
+        )
 
         # Check file exists in /dest/
-        dest_path = Path(f"/dest/bar")
+        dest_path = Path("/dest/bar")
         assert dest_path.is_file()
 
         # Check it has been decrypted

@@ -85,14 +85,17 @@ class IndexConfig(SectionConfig):
     Index config container
     """
 
-    path: str
+    path: Path
 
     @classmethod
     def parse_config(self, section: SectionProxy) -> Dict[str, Any]:
-        path = section.get("path", "")
+        path_raw: str = section.get("path", "")
 
-        if not path:
+        if not path_raw:
             raise ValueError("The index section must declare a path")
+        path = Path(path_raw)
+        if not path.parent.exists():
+            raise ValueError("The path for the index does not exist")
 
         return {"path": path}
 

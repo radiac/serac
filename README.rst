@@ -30,8 +30,11 @@ Usage
 
 To run serac::
 
-    /path/to/venv/bin/serac /path/to/serac.conf
+    /path/to/venv/bin/serac /path/to/serac.conf COMMAND [OPTIONS]
 
+To run during development::
+
+    python -m serac.commands /path/to/search.conf COMMAND [OPTIONS]
 
 To run tests::
 

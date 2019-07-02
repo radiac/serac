@@ -2,7 +2,7 @@
 Storage on AWS S3
 """
 from configparser import ConfigParser
-from typing import Any, BinaryIO, Dict
+from typing import Any, Dict, IO
 
 import boto3
 from smart_open import open
@@ -35,19 +35,19 @@ class S3(Storage):
             if not getattr(self, attr):
                 raise ValueError(f"S3 storage requires a {attr}")
 
-    def get_s3_path(self, filename: str):
-        return f"s3://{self.key}:{self.secret}@{self.bucket}/{self.path}/{filename}"
+    def get_s3_path(self, archive_id: str):
+        return f"s3://{self.key}:{self.secret}@{self.bucket}/{self.path}/{archive_id}"
 
-    def get_size(self, filename: str) -> int:
+    def get_size(self, archive_id: str) -> int:
         session = boto3.Session(
             aws_access_key_id=self.key, aws_secret_access_key=self.secret
         )
         s3 = session.resource("s3")
-        obj = s3.Object(bucket_name=self.bucket, key=f"{self.path}/{filename}")
+        obj = s3.Object(bucket_name=self.bucket, key=f"{self.path}/{archive_id}")
         return obj.content_length
 
-    def read(self, filename: str) -> BinaryIO:
-        return open(self.get_s3_path(filename), "rb")
+    def read(self, archive_id: str) -> IO[bytes]:
+        return open(self.get_s3_path(archive_id), "rb")
 
-    def write(self, filename: str) -> BinaryIO:
-        return open(self.get_s3_path(filename), "wb")
+    def write(self, archive_id: str) -> IO[bytes]:
+        return open(self.get_s3_path(archive_id), "wb")

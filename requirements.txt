@@ -11,13 +11,13 @@ atomicwrites==1.3.0       # via pytest
 attrs==19.1.0             # via black, pytest
 backcall==0.1.0           # via ipython
 black==19.3b0             # via pytest-black
-boto3==1.9.169            # via smart-open
+boto3==1.9.177            # via smart-open
 boto==2.49.0              # via smart-open
-botocore==1.12.169        # via boto3, s3transfer
-certifi==2019.3.9         # via requests
+botocore==1.12.177        # via boto3, s3transfer
+certifi==2019.6.16        # via requests
 cffi==1.12.3              # via cryptography
 chardet==3.0.4            # via requests
-click==7.0                # via black, pip-tools
+click==7.0
 coverage==4.5.3           # via pytest-cov
 cryptography==2.7         # via pyaescrypt
 decorator==4.4.0          # via ipython, traitlets
@@ -30,14 +30,14 @@ importlib-metadata==0.18  # via pluggy, pytest
 ipdb==0.12
 ipython-genutils==0.2.0   # via traitlets
 ipython==7.5.0            # via ipdb
-jedi==0.13.3              # via ipython
+jedi==0.14.0              # via ipython
 jmespath==0.9.4           # via boto3, botocore
 mccabe==0.6.1             # via flake8
 more-itertools==7.0.0     # via pytest
 mypy-extensions==0.4.1    # via mypy
-mypy==0.701               # via pytest-mypy
+mypy==0.711               # via pytest-mypy
 packaging==19.0           # via pytest
-parso==0.4.0              # via jedi
+parso==0.5.0              # via jedi
 peewee==3.9.6
 pexpect==4.7.0            # via ipython
 pickleshare==0.7.5        # via ipython
@@ -65,8 +65,8 @@ six==1.12.0               # via cryptography, freezegun, packaging, pip-tools, p
 smart-open==1.8.4
 toml==0.10.0              # via black, pytest-black
 traitlets==4.3.2          # via ipython
-typed-ast==1.3.5          # via mypy
-typing-extensions==3.7.2
+typed-ast==1.4.0          # via mypy
+typing-extensions==3.7.4
 urllib3==1.25.3           # via botocore, requests
 wcwidth==0.1.7            # via prompt-toolkit, pytest
 zipp==0.5.1               # via importlib-metadata

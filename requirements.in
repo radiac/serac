@@ -11,6 +11,7 @@ typing_extensions
 -e git+https://github.com/radiac/pytest-freezegun.git@bugfix/class-based-tests-with-duration-regression#egg=pytest-freezegun
 
 # Deployment
+click
 peewee
 pyAesCrypt
 smart-open

@@ -4,7 +4,8 @@ Storage base class
 from __future__ import annotations
 
 from configparser import ConfigParser
-from typing import Any, BinaryIO, Dict
+from pathlib import Path
+from typing import Any, IO, Dict
 
 from ..crypto import encrypt, decrypt
 
@@ -36,34 +37,34 @@ class Storage(metaclass=StorageType):
     def parse_config(cls, config: ConfigParser) -> Dict[str, Any]:
         return {}
 
-    def store(self, local_path: str, id: int, password: str):
-        source: BinaryIO
-        with open(local_path, "rb") as source:
-            destination = self.write(str(id))
+    def store(self, local_path: Path, archive_id: str, password: str) -> None:
+        source: IO[bytes]
+        with local_path.open("rb") as source:
+            destination = self.write(archive_id)
             encrypt(source=source, destination=destination, password=password)
             destination.close()
 
-    def retrieve(self, local_path: str, id: int, password: str):
-        source_size = self.get_size(str(id))
-        source = self.read(str(id))
-        destination: BinaryIO
-        with open(local_path, "wb") as destination:
+    def retrieve(self, local_path: Path, archive_id: str, password: str) -> None:
+        source_size = self.get_size(archive_id)
+        source = self.read(archive_id)
+        destination: IO[bytes]
+        with local_path.open("wb") as destination:
             decrypt(source, destination, password, source_size)
         source.close()
 
-    def get_size(self, filename: str) -> int:
+    def get_size(self, archive_id: str) -> int:
         """
         Return the size of the file
         """
         raise NotImplementedError("Storage.get_size must be implemented by subclasses")
 
-    def read(self, filename: str) -> BinaryIO:
+    def read(self, archive_id: str) -> IO[bytes]:
         """
         Return an IO object to read from
         """
         raise NotImplementedError("Storage.read must be implemented by subclasses")
 
-    def write(self, filename: str) -> BinaryIO:
+    def write(self, archive_id: str) -> IO[bytes]:
         """
         Return an IO object to write to
         """

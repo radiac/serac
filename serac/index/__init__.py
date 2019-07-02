@@ -3,6 +3,6 @@ Database
 
 Load in order to ensure models are always ready for generate_mapping
 """
-from .database import get_current_db  # noqa
+from . import database  # noqa
 from .models import Action, File  # noqa
-from . import index  # noqa
+from .index import Changeset, get_state_at, scan  # noqa

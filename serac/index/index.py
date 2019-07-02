@@ -24,10 +24,10 @@ class Changeset:
     Set of changes from an index scan
     """
 
-    added: Dict[str, File]
-    content: Dict[str, File]
-    metadata: Dict[str, File]
-    deleted: Dict[str, File]
+    added: Dict[Path, File]
+    content: Dict[Path, File]
+    metadata: Dict[Path, File]
+    deleted: Dict[Path, File]
 
     def __init__(self):
         self.added = defaultdict(File)
@@ -35,7 +35,7 @@ class Changeset:
         self.metadata = defaultdict(File)
         self.deleted = defaultdict(File)
 
-    def commit(self, destination: DestinationConfig):
+    def commit(self, destination: DestinationConfig) -> None:
         for file in chain(self.metadata.values(), self.deleted.values()):
             file.save()
 
@@ -43,7 +43,7 @@ class Changeset:
             file.archive(destination)
 
 
-def get_state_at(when: datetime) -> Dict[str, File]:
+def get_state_at(when: datetime) -> Dict[Path, File]:
     file_fields = File._meta.sorted_fields + [
         fn.MAX(File.last_modified).alias("latest_modified")
     ]
@@ -56,9 +56,9 @@ def get_state_at(when: datetime) -> Dict[str, File]:
     return {file.path: file for file in files}
 
 
-def is_excluded(path: str, excludes: List[str]) -> bool:
+def is_excluded(path: Path, excludes: List[str]) -> bool:
     for pattern in excludes:
-        if fnmatchcase(path, pattern):
+        if fnmatchcase(str(path), pattern):
             return True
     return False
 
@@ -84,11 +84,9 @@ def scan(includes: List[str], excludes: Optional[List[str]] = None) -> Changeset
             path = next(include_paths)
         except StopIteration:
             break
-        else:
-            path_str = str(path)
 
         # Run exclusions
-        if excludes and is_excluded(path_str, excludes):
+        if excludes and is_excluded(path, excludes):
             continue
 
         # Examine path
@@ -98,15 +96,15 @@ def scan(includes: List[str], excludes: Optional[List[str]] = None) -> Changeset
             continue
 
         # Create File and collect metadata
-        file = File(path=path_str)
+        file = File(path=path)
         file.refresh_metadata_from_disk()
 
         # Diff path against last_state (removing so we know we've seen it)
-        last_file = last_state.pop(path_str, None)
+        last_file = last_state.pop(path, None)
         if last_file is None:
             # Added
             file.action = Action.ADD
-            changeset.added[path_str] = file
+            changeset.added[path] = file
 
         elif file != last_file:
             # Something changed
@@ -116,16 +114,15 @@ def scan(includes: List[str], excludes: Optional[List[str]] = None) -> Changeset
             if file_hash != last_file.archived.hash:
                 # Content has changed
                 file.action = Action.CONTENT
-                changeset.content[path_str] = file
+                changeset.content[path] = file
             else:
                 # Just metadata
                 file.action = Action.METADATA
                 file.archived = last_file.archived
-                changeset.metadata[path_str] = file
+                changeset.metadata[path] = file
 
     # All remaining files in the state were deleted
     changeset.deleted = {
-        path_str: file.clone(action=Action.DELETE)
-        for path_str, file in last_state.items()
+        path: file.clone(action=Action.DELETE) for path, file in last_state.items()
     }
     return changeset
