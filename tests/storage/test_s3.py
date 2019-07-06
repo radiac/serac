@@ -23,7 +23,7 @@ from ..mocks import FilesystemTest
 )
 class TestS3(FilesystemTest):
     @property
-    def S3(self):
+    def storage_S3(self):
         return S3(
             key=os.environ["S3_KEY"],
             secret=os.environ["S3_SECRET"],
@@ -32,14 +32,14 @@ class TestS3(FilesystemTest):
         )
 
     @property
-    def boto3(self):
+    def boto_session(self):
         return boto3.Session(
             aws_access_key_id=os.environ["S3_KEY"],
             aws_secret_access_key=os.environ["S3_SECRET"],
         )
 
     def get_s3_object(self, filename):
-        s3 = self.boto3.resource("s3")
+        s3 = self.boto_session.resource("s3")
         return s3.Object(
             bucket_name=os.environ["S3_BUCKET"],
             key=f"{os.environ['S3_PATH']}/{filename}",
@@ -51,12 +51,14 @@ class TestS3(FilesystemTest):
         super().teardown_method()
 
     def test_store(self, fs):
+        self.fix_boto(fs)
+
         # This will be tested in a separate test, but we'll focus on the store aspect
         fs.create_file("/src/foo", contents="unencrypted")
-        storage = self.S3
+        storage = self.storage_S3
 
         # Encrypt and push to storage
-        storage.store(local_path="/src/foo", id=1, password="secret")
+        storage.store(local_path=Path("/src/foo"), archive_id="1", password="secret")
 
         # Check file exists in S3
         assert storage.get_size("1") > 0
@@ -66,20 +68,25 @@ class TestS3(FilesystemTest):
         # Check it has been encrypted and we can decrypt it
         encrypted = BytesIO()
         encrypted.write(data)
+        encrypted.seek(0)
         decrypted = BytesIO()
         crypto.decrypt(encrypted, decrypted, "secret", len(data))
         assert str(decrypted.getvalue(), "utf-8") == "unencrypted"
 
     def test_retrieve(self, fs):
+        self.fix_boto(fs)
+
         # Encrypt and deliver. This is tested in a separate test
         fs.create_file("/src/foo", contents="unencrypted")
         fs.create_dir("/store")
         fs.create_dir("/dest")
-        storage = self.S3
-        storage.store(local_path="/src/foo", id=1, password="secret")
+        storage = self.storage_S3
+        storage.store(local_path=Path("/src/foo"), archive_id="1", password="secret")
 
         # Pull and decrypt from storage
-        storage.retrieve(local_path="/dest/bar", id=1, password="secret")
+        storage.retrieve(
+            local_path=Path("/dest/bar"), archive_id="1", password="secret"
+        )
 
         # Check file exists in /dest/
         dest_path = Path(f"/dest/bar")

@@ -6,52 +6,13 @@ from pathlib import Path
 from serac.config import Config, SourceConfig, DestinationConfig, IndexConfig
 from serac.storage import Local, S3
 
-
-SAMPLE = """# Sample config file
-
-[source]
-# Define the source for the backups
-
-# List of paths to include and exclude (glob patterns)
-include =
-    /path/to/source
-    /path/somewhere/else
-exclude =
-    /path/to/source/unprocessed
-    /path/somewhere/else/*.jpg
-
-[destination]
-# Define where the backups are saved
-
-{storage}
-
-# Encrypt backups with this password
-password = l0ng_s3cr3t
-
-[index]
-# Define how indexed files are treated
-
-# Location where indexes are stored
-# This should then be backed up by another service, eg duplicity
-path = /path/to/indexes
-"""
-
-storage_local = """# Backup to a local path
-storage = local
-path = /path/to/backup
-"""
-
-storage_s3 = """# Backup to S3
-storage = s3
-key = 4p1_k3y
-secret = 53cr3t
-bucket = arn:aws:s3:::my_bucket_name
-path = path/within/bucket
-"""
+from .mocks import SAMPLE_CONFIG, SAMPLE_STORAGE_LOCAL, SAMPLE_STORAGE_S3
 
 
 def test_parser_source(fs):
-    fs.create_file("/sample.conf", contents=SAMPLE.format(storage=storage_local))
+    fs.create_file(
+        "/sample.conf", contents=SAMPLE_CONFIG.format(storage=SAMPLE_STORAGE_LOCAL)
+    )
     fs.create_dir("/path/to/indexes")
     fs.create_dir("/path/to/backup")
     config = Config(path=Path("/sample.conf"))
@@ -65,7 +26,9 @@ def test_parser_source(fs):
 
 
 def test_parser_destimation__local(fs):
-    fs.create_file("/sample.conf", contents=SAMPLE.format(storage=storage_local))
+    fs.create_file(
+        "/sample.conf", contents=SAMPLE_CONFIG.format(storage=SAMPLE_STORAGE_LOCAL)
+    )
     fs.create_dir("/path/to/indexes")
     fs.create_dir("/path/to/backup")
     config = Config(path=Path("/sample.conf"))
@@ -77,7 +40,9 @@ def test_parser_destimation__local(fs):
 
 
 def test_parser_destimation__s3(fs):
-    fs.create_file("/sample.conf", contents=SAMPLE.format(storage=storage_s3))
+    fs.create_file(
+        "/sample.conf", contents=SAMPLE_CONFIG.format(storage=SAMPLE_STORAGE_S3)
+    )
     fs.create_dir("/path/to/indexes")
     config = Config(path=Path("/sample.conf"))
 
@@ -91,7 +56,9 @@ def test_parser_destimation__s3(fs):
 
 
 def test_parser_index(fs):
-    fs.create_file("/sample.conf", contents=SAMPLE.format(storage=storage_local))
+    fs.create_file(
+        "/sample.conf", contents=SAMPLE_CONFIG.format(storage=SAMPLE_STORAGE_LOCAL)
+    )
     fs.create_dir("/path/to/indexes")
     fs.create_dir("/path/to/backup")
     config = Config(path=Path("/sample.conf"))

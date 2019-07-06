@@ -17,7 +17,10 @@ from .index import Changeset, database, scan, get_state_at, File
 )
 @click.pass_context
 def cli(ctx, config):
-    ctx.obj["config"] = Config(config)
+    try:
+        ctx.obj["config"] = Config(config)
+    except Exception as e:
+        raise click.ClickException(f"Invalid config: {e}")
 
 
 @cli.command()
@@ -36,7 +39,7 @@ def init(ctx):
     """
     Create a new index database
     """
-    config = ctx.obj["config"]
+    config: Config = ctx.obj["config"]
     if config.index.path.exists():
         raise ValueError(f"Index database {config.index.path} already exists")
     database.create_db(config.index.path)
@@ -50,12 +53,12 @@ def archive(ctx):
     """
     Scan and archive any changes
     """
-    config = ctx.obj["config"]
-    database.connect(config)
+    config: Config = ctx.obj["config"]
+    database.connect(config.index.path)
     changeset: Changeset = scan(
         includes=config.source.includes, excludes=config.source.excludes
     )
-    changeset.commit()
+    changeset.commit(destination=config.destination)
     database.disconnect()
 
 
@@ -71,12 +74,12 @@ def show(ctx, path_str: Optional[str] = None, at: Optional[datetime] = None):
     """
     Show the status of the archive
     """
-    config = ctx.obj["config"]
+    config: Config = ctx.obj["config"]
 
     if not at:
         at = datetime.now()
 
-    database.connect(config)
+    database.connect(config.index.path)
     state: Dict[Path, File] = get_state_at(at)
     path: Path
 
@@ -90,7 +93,7 @@ def show(ctx, path_str: Optional[str] = None, at: Optional[datetime] = None):
     else:
         for path in sorted(state):
             print(path)
-        else:
+        if not state:
             print("No files found")
 
     database.disconnect()
@@ -113,23 +116,27 @@ def restore(
     """
     Restore from the archive
     """
-    config = ctx.obj["config"]
-    database.connect(config)
+    config: Config = ctx.obj["config"]
+    database.connect(config.index.path)
     dest_path = Path(dest)
 
     if not at:
         at = datetime.now()
     state: Dict[Path, File] = get_state_at(at)
+    path: Path
 
     if path_str:
         path = Path(path_str)
         if path in state:
             file: File = state[path]
-            file.restore(destination=config.destination, to=dest_path / file.path)
+            file.restore(destination=config.destination, to=dest_path / file.path.name)
         else:
             print("File not found")
     else:
-        raise NotImplementedError()
+        for path, file in state.items():
+            target_path = dest_path / file.path.relative_to("/")
+            target_path.parent.mkdir(parents=True)
+            file.restore(destination=config.destination, to=target_path)
 
     database.disconnect()
 

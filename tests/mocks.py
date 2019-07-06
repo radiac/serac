@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 from typing import Type
 
+import boto3
 from peewee import Database, SqliteDatabase
 
 from serac import storage
@@ -46,6 +47,14 @@ class FilesystemTest(BaseTest):
     """
     Base for test classes which use the file system
     """
+
+    def fix_boto(self, fs):
+        """
+        pyfakefs is incompatible with boto - this will pass through the boto
+        package so it will function correctly
+        """
+        boto_dir = Path(boto3.__file__).parent.parent.absolute()
+        fs.add_real_directory(str(boto_dir), lazy_read=False)
 
     def mock_fs(self, fs):
         """
@@ -191,3 +200,46 @@ def gen_file(**kwargs):
 def mock_file_archive(self: models.File, hash: str = "hash") -> None:
     self.archived = models.Archived.create(hash=self.calculate_hash(), size=self.size)
     self.save()
+
+
+SAMPLE_CONFIG = """# Sample config file
+
+[source]
+# Define the source for the backups
+
+# List of paths to include and exclude (glob patterns)
+include =
+    /path/to/source
+    /path/somewhere/else
+exclude =
+    /path/to/source/unprocessed
+    /path/somewhere/else/*.jpg
+
+[destination]
+# Define where the backups are saved
+
+{storage}
+
+# Encrypt backups with this password
+password = l0ng_s3cr3t
+
+[index]
+# Define how indexed files are treated
+
+# Location where indexes are stored
+# This should then be backed up by another service, eg duplicity
+path = /path/to/indexes
+"""
+
+SAMPLE_STORAGE_LOCAL = """# Backup to a local path
+storage = local
+path = /path/to/backup
+"""
+
+SAMPLE_STORAGE_S3 = """# Backup to S3
+storage = s3
+key = 4p1_k3y
+secret = 53cr3t
+bucket = arn:aws:s3:::my_bucket_name
+path = path/within/bucket
+"""
