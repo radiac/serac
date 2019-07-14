@@ -4,6 +4,7 @@ Mock objects
 from datetime import datetime
 from pathlib import Path
 import shutil
+from time import time
 from typing import Type
 
 import boto3
@@ -187,12 +188,16 @@ def gen_file(**kwargs):
         path="/tmp/foo",
         archived=archived,
         action=models.Action.ADD,
-        last_modified=datetime.now(),
+        last_modified=int(time()),
         owner=1000,
         group=1000,
         permissions=644,
     )
     attrs.update(kwargs)
+
+    if isinstance(attrs["last_modified"], datetime):
+        attrs["last_modified"] = int(attrs["last_modified"].timestamp())
+
     attrs["path"] = Path(attrs["path"])
     return models.File.create(**attrs)
 

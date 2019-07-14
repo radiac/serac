@@ -41,9 +41,12 @@ class TestDatabaseTest(DatabaseTest):
 
         file1 = gen_file(path="/tmp/foo", last_modified=earlier)
         file2 = gen_file(path="/tmp/foo", last_modified=now)
-        files = File.select()
+        files = list(File.select())
+
         assert len(files) == 2
-        assert list(files) == [file1, file2]
+        assert file1 != file2
+        assert file1 in files
+        assert file2 in files
 
 
 class TestFile(DatabaseTest, FilesystemTest):
@@ -64,7 +67,7 @@ class TestFile(DatabaseTest, FilesystemTest):
 
         file.refresh_metadata_from_disk()
         assert file.size == len("unencrypted")
-        assert file.last_modified == datetime.timestamp(frozen_time)
+        assert file.last_modified == frozen_time.timestamp()
         assert file.owner == uid
         assert file.group == gid
 
@@ -78,7 +81,7 @@ class TestFile(DatabaseTest, FilesystemTest):
 
         # Modify file
         frozen_time_modified = datetime(2001, 1, 1, 1, 1, 2)
-        freezer.move_to(frozen_time)
+        freezer.move_to(frozen_time_modified)
         with file.path.open("w") as handle:
             handle.write("modified")
         fake_file.st_mtime = datetime.timestamp(frozen_time_modified)
@@ -86,8 +89,8 @@ class TestFile(DatabaseTest, FilesystemTest):
         file_modified.refresh_metadata_from_disk()
 
         # Last modified dates are different, objects are not the same
-        assert file.last_modified == datetime.timestamp(frozen_time)
-        assert file_modified.last_modified == datetime.timestamp(frozen_time_modified)
+        assert file.last_modified == frozen_time.timestamp()
+        assert file_modified.last_modified == frozen_time_modified.timestamp()
         assert file != file_modified
 
     def test_archive(self, fs):

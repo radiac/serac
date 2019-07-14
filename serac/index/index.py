@@ -4,11 +4,11 @@ Index management
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime
 from fnmatch import fnmatchcase
 from glob import iglob
 from itertools import chain
 from pathlib import Path
+from time import time
 from typing import Dict, Iterator, List, Optional
 
 from peewee import fn
@@ -43,13 +43,21 @@ class Changeset:
             file.archive(destination)
 
 
-def get_state_at(when: datetime) -> Dict[Path, File]:
+def get_state_at(timestamp: int) -> Dict[Path, File]:
+    """
+    Get the state of the index at a given timestamp
+    """
+    if not isinstance(timestamp, int):
+        # This is going to be a common error, and we don't want to convert it
+        # ourselves - we won't have the timezone info and we'll make a mistake
+        raise ValueError("Can only get state using a timestamp")
+
     file_fields = File._meta.sorted_fields + [
         fn.MAX(File.last_modified).alias("latest_modified")
     ]
     files = (
         File.select(*file_fields)
-        .where(File.last_modified <= when)
+        .where(File.last_modified <= timestamp)
         .group_by(File.path)
         .having(File.action != Action.DELETE)
     )
@@ -76,7 +84,7 @@ def scan(includes: List[str], excludes: Optional[List[str]] = None) -> Changeset
     )
 
     changeset = Changeset()
-    last_state = get_state_at(when=datetime.now())
+    last_state = get_state_at(timestamp=int(time()))
 
     while True:
         # Get next path
@@ -126,3 +134,39 @@ def scan(includes: List[str], excludes: Optional[List[str]] = None) -> Changeset
         path: file.clone(action=Action.DELETE) for path, file in last_state.items()
     }
     return changeset
+
+
+def restore(
+    destination: DestinationConfig,
+    timestamp: int,
+    out_path: Path,
+    archive_path: Optional[Path] = Path("/"),
+    missing_ok: bool = False,
+) -> int:
+    if not isinstance(timestamp, int):
+        # This is going to be a common error, and we don't want to convert it
+        # ourselves - we won't have the timezone info and we'll make a mistake
+        raise ValueError("Can only restore using a timestamp")
+    state: Dict[Path, File] = get_state_at(timestamp)
+
+    if archive_path in state:
+        if out_path.is_dir():
+            out_path /= archive_path.name
+
+    path: Path
+    file: File
+    restored = 0
+    for path, file in state.items():
+        if not archive_path or archive_path == path or archive_path in path.parents:
+            if archive_path:
+                target_path = out_path / file.path.relative_to(archive_path)
+            else:
+                target_path = out_path / file.path.relative_to("/")
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            file.restore(destination=destination, to=target_path)
+            restored += 1
+
+    if not missing_ok and not restored:
+        raise FileNotFoundError("Requested path not found in archive")
+
+    return restored

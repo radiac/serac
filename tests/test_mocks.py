@@ -1,5 +1,5 @@
 """
-Test logic of test mocks
+Confirm that non-trivial test mocks function as expected
 """
 from pathlib import Path
 

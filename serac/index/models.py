@@ -7,13 +7,11 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any, Dict, Optional, Union, TYPE_CHECKING
 
-from peewee import CharField, DateTimeField, IntegerField, ForeignKeyField, TextField
+from peewee import CharField, IntegerField, ForeignKeyField, TextField
 
 from .database import Model, EnumField, PathField
 
 if TYPE_CHECKING:
-    from datetime import datetime
-
     from ..config import DestinationConfig
 
 
@@ -45,7 +43,7 @@ class File(Model):
         Archived, backref="files"
     )
     action: Union[EnumField, Action] = EnumField(Action)
-    last_modified: Union[DateTimeField, datetime] = DateTimeField()
+    last_modified: Union[IntegerField, int] = IntegerField()
     owner: Union[IntegerField, int] = IntegerField()
     group: Union[IntegerField, int] = IntegerField()
     permissions: Union[IntegerField, int] = IntegerField()
@@ -89,7 +87,7 @@ class File(Model):
         if not self.path.is_file():
             raise ValueError(f"File {self.path} is not a file")
         stat = self.path.stat()
-        self.last_modified = stat.st_mtime
+        self.last_modified = int(stat.st_mtime)
         self._size = stat.st_size
         self.owner = stat.st_uid
         self.group = stat.st_gid

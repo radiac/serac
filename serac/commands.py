@@ -2,12 +2,37 @@
 Commands
 """
 import click
-from datetime import datetime
 from pathlib import Path
+from time import time
 from typing import Dict, Optional
 
 from .config import Config
 from .index import Changeset, database, scan, get_state_at, File
+
+
+class Timestamp(click.DateTime):  # type: ignore  # due to typeshed issue
+    """
+    Store a datetime or timestamp
+    """
+
+    def get_metavar(self, param):
+        return "[timestamp|{}]".format("|".join(self.formats))
+
+    def convert(self, value, param, ctx) -> int:
+        if value.isdigit():
+            return value
+        try:
+            dt = super().convert(value, param, ctx)
+        except click.BadParameter:
+            self.fail(
+                "invalid datetime format: {}. (choose from timestamp, {})".format(
+                    value, ", ".join(self.formats)
+                )
+            )
+        return int(dt.timestamp())
+
+    def __repr__(self):
+        return "Timstamp"
 
 
 @click.group()
@@ -41,7 +66,7 @@ def init(ctx):
     """
     config: Config = ctx.obj["config"]
     if config.index.path.exists():
-        raise ValueError(f"Index database {config.index.path} already exists")
+        raise click.ClickException(f"Index database {config.index.path} already exists")
     database.create_db(config.index.path)
     database.disconnect()
     print("Index database created")
@@ -65,78 +90,91 @@ def archive(ctx):
 @cli.command()
 @click.option(
     "--at",
-    help="Date and tme to go back to",
-    type=click.DateTime(),  # type: ignore  # due to typeshed issue
+    "timestamp",
+    help="Date and time (or timestamp) to go back to",
+    type=Timestamp(),
 )
-@click.option("--path", "path_str", help="Path to file", type=click.Path(exists=False))
+@click.option(
+    "--path", "filter_str", help="Path to file", type=click.Path(exists=False)
+)
 @click.pass_context
-def show(ctx, path_str: Optional[str] = None, at: Optional[datetime] = None):
+def show(ctx, filter_str: Optional[str] = None, timestamp: Optional[int] = None):
     """
     Show the status of the archive
     """
     config: Config = ctx.obj["config"]
 
-    if not at:
-        at = datetime.now()
+    if not timestamp:
+        timestamp = int(time())
 
     database.connect(config.index.path)
-    state: Dict[Path, File] = get_state_at(at)
+    state: Dict[Path, File] = get_state_at(timestamp)
     path: Path
 
-    if path_str:
-        path = Path(path_str)
-        if path in state:
-            print(path)
-        else:
-            print("File not found")
+    filter_path = None
+    if filter_str:
+        filter_path = Path(filter_str)
 
-    else:
-        for path in sorted(state):
-            print(path)
-        if not state:
-            print("No files found")
+    found = 0
+    for path in sorted(state):
+        if filter_path and filter_path != path and filter_path not in path.parents:
+            continue
+        found += 1
+    if not found:
+        if filter_path:
+            raise click.ClickException(f"No files found at {filter_str}")
+        else:
+            raise click.ClickException("No files found")
 
     database.disconnect()
 
 
 @cli.command()
-@click.argument("dest", type=click.Path(exists=False))
+@click.argument("out", type=click.Path(exists=False))
 @click.option(
     "--at",
-    help="Date and tme to go back to",
-    type=click.DateTime(),  # type: ignore  # due to typeshed issue
+    "timestamp",
+    help="Date and time (or timestamp) to go back to",
+    type=Timestamp(),
 )
 @click.option(
-    "--path", "path_str", help="Path to file to restore", type=click.Path(exists=False)
+    "--archive",
+    "archive_str",
+    help="Path to file in archive",
+    type=click.Path(exists=False),
 )
 @click.pass_context
 def restore(
-    ctx, dest: str, at: Optional[datetime] = None, path_str: Optional[str] = None
+    ctx, out: str, timestamp: Optional[int] = None, archive_str: Optional[str] = None
 ):
     """
     Restore from the archive
     """
     config: Config = ctx.obj["config"]
     database.connect(config.index.path)
-    dest_path = Path(dest)
 
-    if not at:
-        at = datetime.now()
-    state: Dict[Path, File] = get_state_at(at)
-    path: Path
+    if not timestamp:
+        timestamp = int(time())
 
-    if path_str:
-        path = Path(path_str)
-        if path in state:
-            file: File = state[path]
-            file.restore(destination=config.destination, to=dest_path / file.path.name)
-        else:
-            print("File not found")
+    archive_path: Optional[Path]
+    if archive_str:
+        archive_path = Path(archive_str)
     else:
-        for path, file in state.items():
-            target_path = dest_path / file.path.relative_to("/")
-            target_path.parent.mkdir(parents=True)
-            file.restore(destination=config.destination, to=target_path)
+        archive_path = None
+
+    # TODO: Tidy these var names
+    restored = restore(
+        destination=config.destination,
+        timestamp=timestamp,
+        out_path=Path(out),
+        archive_path=archive_path,
+        missing_ok=True,
+    )
+
+    if restored:
+        print(f"Restored {restored} file{'' if restored == 1 else 's'}")
+    else:
+        raise click.ClickException(f"Path not found")
 
     database.disconnect()
 
