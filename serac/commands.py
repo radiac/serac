@@ -83,7 +83,7 @@ def archive(ctx):
     changeset: Changeset = scan(
         includes=config.source.includes, excludes=config.source.excludes
     )
-    changeset.commit(destination=config.destination)
+    changeset.commit(archive_config=config.archive)
     database.disconnect()
 
 
@@ -162,9 +162,8 @@ def restore(
     else:
         archive_path = None
 
-    # TODO: Tidy these var names
     restored = restore(
-        destination=config.destination,
+        archive_config=config.archive,
         timestamp=timestamp,
         out_path=Path(out),
         archive_path=archive_path,

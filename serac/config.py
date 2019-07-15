@@ -52,9 +52,9 @@ class SourceConfig(SectionConfig):
 
 
 @dataclass
-class DestinationConfig(SectionConfig):
+class ArchiveConfig(SectionConfig):
     """
-    Destination config container
+    Archive config container
     """
 
     storage: Storage
@@ -66,14 +66,12 @@ class DestinationConfig(SectionConfig):
         password = section.get("password", "")
 
         if not storage_type:
-            raise ValueError("The destination section must declare a storage type")
+            raise ValueError("The archive section must declare a storage type")
 
         # Look up storage type in registry and get it to parse config
         storage_cls = storage_registry.get(storage_type)
         if not storage_cls:
-            raise ValueError(
-                f"The destination storage '{storage_type}' is not recognised"
-            )
+            raise ValueError(f"The archive storage '{storage_type}' is not recognised")
         storage = storage_cls.from_config(section)
 
         return {"storage": storage, "password": password}
@@ -105,9 +103,9 @@ class Config:
     Configuration file loader
     """
 
-    sections = ["source", "destination", "index"]
+    sections = ["source", "archive", "index"]
     source: SourceConfig
-    destination: DestinationConfig
+    archive: ArchiveConfig
     index: IndexConfig
 
     def __init__(self, path: Path = None) -> None:
@@ -120,10 +118,10 @@ class Config:
 
         if sorted(parser.sections()) != sorted(self.sections):
             raise ValueError(
-                "Invalid config file; must contain source, destination and "
+                "Invalid config file; must contain source, archive and "
                 f'index sections; instead found {", ".join(parser.sections())}'
             )
 
         self.source = SourceConfig.from_config(parser["source"])
-        self.destination = DestinationConfig.from_config(parser["destination"])
+        self.archive = ArchiveConfig.from_config(parser["archive"])
         self.index = IndexConfig.from_config(parser["index"])

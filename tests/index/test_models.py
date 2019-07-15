@@ -8,7 +8,7 @@ from pathlib import Path
 from pyfakefs import fake_filesystem
 
 from serac import crypto
-from serac.config import DestinationConfig
+from serac.config import ArchiveConfig
 from serac.storage import Local
 from serac.index.models import Action, Archived, File
 
@@ -97,11 +97,11 @@ class TestFile(DatabaseTest, FilesystemTest):
         fs.create_file("/src/foo", contents="unencrypted")
         fs.create_dir("/dest")
         file = File(path=Path("/src/foo"), action=Action.ADD)
-        destination_config = DestinationConfig(
+        archive_config = ArchiveConfig(
             storage=Local(path=Path("/dest/")), password="secret"
         )
         file.refresh_metadata_from_disk()
-        file.archive(destination_config)
+        file.archive(archive_config)
 
         # Check Archived db object exists
         assert file.archived.id > 0
@@ -120,7 +120,7 @@ class TestFile(DatabaseTest, FilesystemTest):
         assert str(decrypted.getvalue(), "utf-8") == "unencrypted"
 
     def test_restore(self, fs):
-        destination_config = DestinationConfig(
+        archive_config = ArchiveConfig(
             storage=Local(path=Path("/dest/")), password="secret"
         )
 
@@ -129,11 +129,11 @@ class TestFile(DatabaseTest, FilesystemTest):
         fs.create_dir("/dest")
         file = File(path=Path("/src/foo"), action=Action.ADD)
         file.refresh_metadata_from_disk()
-        file.archive(destination_config)
+        file.archive(archive_config)
 
         # Now check we can restore it
         fs.create_dir("/restore")
-        file.restore(destination_config, to=Path("/restore/file"))
+        file.restore(archive_config, to=Path("/restore/file"))
         decrypted = Path("/restore/file")
         with decrypted.open("r") as handle:
             assert handle.read() == "unencrypted"

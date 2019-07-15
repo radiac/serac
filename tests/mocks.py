@@ -11,7 +11,7 @@ import boto3
 from peewee import Database, SqliteDatabase
 
 from serac import storage
-from serac.config import DestinationConfig
+from serac.config import ArchiveConfig
 from serac.index import database
 from serac.index import models
 
@@ -69,8 +69,8 @@ class FilesystemTest(BaseTest):
         fs.create_file("/alt/six.txt", contents="six")
         fs.create_file("/alt/seven.txt", contents="seven")
 
-    def get_destination(self):
-        return DestinationConfig(
+    def get_archive_config(self):
+        return ArchiveConfig(
             storage=storage.Local(path=Path("/dest/")), password="secret"
         )
 
@@ -220,7 +220,7 @@ exclude =
     /path/to/source/unprocessed
     /path/somewhere/else/*.jpg
 
-[destination]
+[archive]
 # Define where the backups are saved
 
 {storage}

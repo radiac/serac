@@ -135,12 +135,12 @@ class TestIndexScan(DatabaseTest, FilesystemTest):
         monkeypatch.setattr(File, "archive", mock_file_archive)
 
         changeset = scan(includes=["/src"])
-        changeset.commit(destination=self.get_destination())
+        changeset.commit(archive_config=self.get_archive_config())
 
         Path("/src/one.txt").write_text("one updated")
         Path("/src/dir/three.txt").write_text("three updated")
         changeset = scan(includes=["/src"])
-        changeset.commit(destination=self.get_destination())
+        changeset.commit(archive_config=self.get_archive_config())
 
         assert len(changeset.added.keys()) == 0
         assert len(changeset.content.keys()) == 2
@@ -154,12 +154,12 @@ class TestIndexScan(DatabaseTest, FilesystemTest):
         monkeypatch.setattr(File, "archive", mock_file_archive)
 
         changeset = scan(includes=["/src"])
-        changeset.commit(destination=self.get_destination())
+        changeset.commit(archive_config=self.get_archive_config())
 
         Path("/src/one.txt").chmod(0o444)
         os.chown("/src/dir/three.txt", 1, 1)
         changeset = scan(includes=["/src"])
-        changeset.commit(destination=self.get_destination())
+        changeset.commit(archive_config=self.get_archive_config())
 
         assert len(changeset.added.keys()) == 0
         assert len(changeset.content.keys()) == 0
@@ -173,12 +173,12 @@ class TestIndexScan(DatabaseTest, FilesystemTest):
         monkeypatch.setattr(File, "archive", mock_file_archive)
 
         changeset = scan(includes=["/src"])
-        changeset.commit(destination=self.get_destination())
+        changeset.commit(archive_config=self.get_archive_config())
 
         Path("/src/one.txt").unlink()
         Path("/src/dir/three.txt").unlink()
         changeset = scan(includes=["/src"])
-        changeset.commit(destination=self.get_destination())
+        changeset.commit(archive_config=self.get_archive_config())
 
         assert len(changeset.added.keys()) == 0
         assert len(changeset.content.keys()) == 0
@@ -194,13 +194,13 @@ class TestIndexRestore(DatabaseTest, FilesystemTest):
         fs.create_dir("/dest")
         fs.create_dir("/retrieved")
         changeset = scan(includes=["/src/"])
-        changeset.commit(destination=self.get_destination())
+        changeset.commit(archive_config=self.get_archive_config())
 
     def mock_update(self, fs):
         Path("/src/dir/three.txt").write_text("updated")
         FakeFile("/src/dir/three.txt", filesystem=fs).st_mtime = int(time())
         changeset = scan(includes=["/src/"])
-        changeset.commit(destination=self.get_destination())
+        changeset.commit(archive_config=self.get_archive_config())
 
     def mock_two_states(self, fs, freezer):
         initial_time = datetime(2001, 1, 1, 1, 1, 1)
@@ -214,7 +214,7 @@ class TestIndexRestore(DatabaseTest, FilesystemTest):
     def test_restore_file__from_head__restores_single_file(self, fs, freezer):
         initial_time, update_time = self.mock_two_states(fs, freezer)
         restored = restore(
-            destination=self.get_destination(),
+            archive_config=self.get_archive_config(),
             timestamp=int(time()),
             out_path=Path("/retrieved"),
             archive_path=Path("/src/dir/three.txt"),
@@ -227,7 +227,7 @@ class TestIndexRestore(DatabaseTest, FilesystemTest):
     def test_restore_file__from_past__restores_single_file(self, fs, freezer):
         initial_time, update_time = self.mock_two_states(fs, freezer)
         restored = restore(
-            destination=self.get_destination(),
+            archive_config=self.get_archive_config(),
             timestamp=int(initial_time.timestamp()),
             out_path=Path("/retrieved"),
             archive_path=Path("/src/dir/three.txt"),
@@ -241,7 +241,7 @@ class TestIndexRestore(DatabaseTest, FilesystemTest):
     def test_restore_dir__from_head__restores_some_files(self, fs, freezer):
         initial_time, update_time = self.mock_two_states(fs, freezer)
         restored = restore(
-            destination=self.get_destination(),
+            archive_config=self.get_archive_config(),
             timestamp=int(time()),
             out_path=Path("/retrieved"),
             archive_path=Path("/src/dir"),
@@ -258,7 +258,7 @@ class TestIndexRestore(DatabaseTest, FilesystemTest):
     def test_restore_dir__from_past__restores_some_files(self, fs, freezer):
         initial_time, update_time = self.mock_two_states(fs, freezer)
         restored = restore(
-            destination=self.get_destination(),
+            archive_config=self.get_archive_config(),
             timestamp=int(initial_time.timestamp()),
             out_path=Path("/retrieved"),
             archive_path=Path("/src/dir"),
@@ -275,7 +275,7 @@ class TestIndexRestore(DatabaseTest, FilesystemTest):
     def test_restore_all__from_head__restores_all_files(self, fs, freezer):
         initial_time, update_time = self.mock_two_states(fs, freezer)
         restored = restore(
-            destination=self.get_destination(),
+            archive_config=self.get_archive_config(),
             timestamp=int(time()),
             out_path=Path("/retrieved"),
         )
@@ -295,7 +295,7 @@ class TestIndexRestore(DatabaseTest, FilesystemTest):
     def test_restore_all__from_past__restores_all_files(self, fs, freezer):
         initial_time, update_time = self.mock_two_states(fs, freezer)
         restored = restore(
-            destination=self.get_destination(),
+            archive_config=self.get_archive_config(),
             timestamp=int(initial_time.timestamp()),
             out_path=Path("/retrieved"),
         )
@@ -315,7 +315,7 @@ class TestIndexRestore(DatabaseTest, FilesystemTest):
     def test_restore_missing__missing_ok__returns_zero(self, fs, freezer):
         initial_time, update_time = self.mock_two_states(fs, freezer)
         restored = restore(
-            destination=self.get_destination(),
+            archive_config=self.get_archive_config(),
             timestamp=int(time()),
             out_path=Path("/retrieved"),
             archive_path=Path("/does/not.exist"),
@@ -328,7 +328,7 @@ class TestIndexRestore(DatabaseTest, FilesystemTest):
 
         with pytest.raises(FileNotFoundError) as e:
             restore(
-                destination=self.get_destination(),
+                archive_config=self.get_archive_config(),
                 timestamp=int(time()),
                 out_path=Path("/retrieved"),
                 archive_path=Path("/does/not.exist"),
@@ -339,7 +339,7 @@ class TestIndexRestore(DatabaseTest, FilesystemTest):
     def test_restore_missing_empty__missing_not_ok__raises_exception(self, fs, freezer):
         with pytest.raises(FileNotFoundError) as e:
             restore(
-                destination=self.get_destination(),
+                archive_config=self.get_archive_config(),
                 timestamp=int(time()),
                 out_path=Path("/retrieved"),
                 missing_ok=False,

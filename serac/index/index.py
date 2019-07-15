@@ -16,7 +16,7 @@ from peewee import fn
 from .models import Action, File, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..config import DestinationConfig
+    from ..config import ArchiveConfig
 
 
 class Changeset:
@@ -35,12 +35,12 @@ class Changeset:
         self.metadata = defaultdict(File)
         self.deleted = defaultdict(File)
 
-    def commit(self, destination: DestinationConfig) -> None:
+    def commit(self, archive_config: ArchiveConfig) -> None:
         for file in chain(self.metadata.values(), self.deleted.values()):
             file.save()
 
         for file in chain(self.added.values(), self.content.values()):
-            file.archive(destination)
+            file.archive(archive_config)
 
 
 def get_state_at(timestamp: int) -> Dict[Path, File]:
@@ -137,7 +137,7 @@ def scan(includes: List[str], excludes: Optional[List[str]] = None) -> Changeset
 
 
 def restore(
-    destination: DestinationConfig,
+    archive_config: ArchiveConfig,
     timestamp: int,
     out_path: Path,
     archive_path: Optional[Path] = None,
@@ -163,7 +163,7 @@ def restore(
             else:
                 target_path = out_path / file.path.relative_to("/")
             target_path.parent.mkdir(parents=True, exist_ok=True)
-            file.restore(destination=destination, to=target_path)
+            file.restore(archive_config=archive_config, to=target_path)
             restored += 1
 
     if not missing_ok and not restored:

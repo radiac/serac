@@ -59,7 +59,7 @@ Configure serac using a config file::
         /path/to/source/unprocessed
         /path/somewhere/else/*.jpg
 
-    [destination]
+    [archive]
     # Define where the backups are saved
 
     # Backup to a local path

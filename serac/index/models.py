@@ -12,7 +12,7 @@ from peewee import CharField, IntegerField, ForeignKeyField, TextField
 from .database import Model, EnumField, PathField
 
 if TYPE_CHECKING:
-    from ..config import DestinationConfig
+    from ..config import ArchiveConfig
 
 
 class Action(IntEnum):
@@ -131,7 +131,7 @@ class File(Model):
 
         return self._cached_hash
 
-    def archive(self, destination: DestinationConfig):
+    def archive(self, archive_config: ArchiveConfig):
         """
         Push to the archive
 
@@ -143,10 +143,10 @@ class File(Model):
 
         try:
             # Store the file
-            destination.storage.store(
+            archive_config.storage.store(
                 local_path=self.path,
                 archive_id=str(archived.id),
-                password=destination.password,
+                password=archive_config.password,
             )
 
         except Exception as e:
@@ -165,12 +165,12 @@ class File(Model):
             self.archived = archived
             self.save()
 
-    def restore(self, destination: DestinationConfig, to: Path):
+    def restore(self, archive_config: ArchiveConfig, to: Path):
         """
         Restore from the archive
         """
-        destination.storage.retrieve(
+        archive_config.storage.retrieve(
             local_path=to,
             archive_id=str(self.archived.id),
-            password=destination.password,
+            password=archive_config.password,
         )
