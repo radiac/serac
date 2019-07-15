@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from time import time
 
+import pytest
 from pyfakefs.fake_filesystem import FakeFile
 
 from serac.index.index import get_state_at, scan, restore
@@ -201,9 +202,17 @@ class TestIndexRestore(DatabaseTest, FilesystemTest):
         changeset = scan(includes=["/src/"])
         changeset.commit(destination=self.get_destination())
 
-    def test_restore_file__from_head__restores_single_file(self, fs):
+    def mock_two_states(self, fs, freezer):
+        initial_time = datetime(2001, 1, 1, 1, 1, 1)
+        freezer.move_to(initial_time)
         self.mock_initial(fs)
+        update_time = datetime(2001, 1, 1, 1, 1, 2)
+        freezer.move_to(update_time)
         self.mock_update(fs)
+        return initial_time, update_time
+
+    def test_restore_file__from_head__restores_single_file(self, fs, freezer):
+        initial_time, update_time = self.mock_two_states(fs, freezer)
         restored = restore(
             destination=self.get_destination(),
             timestamp=int(time()),
@@ -216,18 +225,12 @@ class TestIndexRestore(DatabaseTest, FilesystemTest):
         assert Path("/retrieved/three.txt").read_text() == "updated"
 
     def test_restore_file__from_past__restores_single_file(self, fs, freezer):
-        initial_time = datetime(2001, 1, 1, 1, 1, 1)
-        freezer.move_to(initial_time)
-        self.mock_initial(fs)
-        update_time = datetime(2001, 1, 1, 1, 1, 2)
-        freezer.move_to(update_time)
-        self.mock_update(fs)
-
+        initial_time, update_time = self.mock_two_states(fs, freezer)
         restored = restore(
             destination=self.get_destination(),
+            timestamp=int(initial_time.timestamp()),
             out_path=Path("/retrieved"),
             archive_path=Path("/src/dir/three.txt"),
-            timestamp=int(initial_time.timestamp()),
         )
 
         assert restored == 1
@@ -235,12 +238,110 @@ class TestIndexRestore(DatabaseTest, FilesystemTest):
         assert Path("/retrieved/three.txt").is_file()
         assert Path("/retrieved/three.txt").read_text() == "three"
 
-    # TODO
-    # test_restore_dir__from_head__restores_some_files(self, fs)
-    # test_restore dir__from_past__restores_some_files(self, fs)
+    def test_restore_dir__from_head__restores_some_files(self, fs, freezer):
+        initial_time, update_time = self.mock_two_states(fs, freezer)
+        restored = restore(
+            destination=self.get_destination(),
+            timestamp=int(time()),
+            out_path=Path("/retrieved"),
+            archive_path=Path("/src/dir"),
+        )
 
-    # test_restore_all__from_head__restores_all_files(self, fs)
-    # test_restore_all__from_past__restores_all_files(self, fs)
+        assert restored == 3
+        assert Path("/retrieved/three.txt").is_file()
+        assert Path("/retrieved/three.txt").read_text() == "updated"
+        assert Path("/retrieved/four.txt").is_file()
+        assert Path("/retrieved/four.txt").read_text() == "four"
+        assert Path("/retrieved/subdir/five.txt").is_file()
+        assert Path("/retrieved/subdir/five.txt").read_text() == "five"
 
-    # test_restore_missing__missing_ok__returns_zero(self, fs)
-    # test_restore_missing__missing_not_ok__raises_exception(self, fs)
+    def test_restore_dir__from_past__restores_some_files(self, fs, freezer):
+        initial_time, update_time = self.mock_two_states(fs, freezer)
+        restored = restore(
+            destination=self.get_destination(),
+            timestamp=int(initial_time.timestamp()),
+            out_path=Path("/retrieved"),
+            archive_path=Path("/src/dir"),
+        )
+
+        assert restored == 3
+        assert Path("/retrieved/three.txt").is_file()
+        assert Path("/retrieved/three.txt").read_text() == "three"
+        assert Path("/retrieved/four.txt").is_file()
+        assert Path("/retrieved/four.txt").read_text() == "four"
+        assert Path("/retrieved/subdir/five.txt").is_file()
+        assert Path("/retrieved/subdir/five.txt").read_text() == "five"
+
+    def test_restore_all__from_head__restores_all_files(self, fs, freezer):
+        initial_time, update_time = self.mock_two_states(fs, freezer)
+        restored = restore(
+            destination=self.get_destination(),
+            timestamp=int(time()),
+            out_path=Path("/retrieved"),
+        )
+
+        assert restored == 5
+        assert Path("/retrieved/src/one.txt").is_file()
+        assert Path("/retrieved/src/one.txt").read_text() == "one"
+        assert Path("/retrieved/src/two.txt").is_file()
+        assert Path("/retrieved/src/two.txt").read_text() == "two"
+        assert Path("/retrieved/src/dir/three.txt").is_file()
+        assert Path("/retrieved/src/dir/three.txt").read_text() == "updated"
+        assert Path("/retrieved/src/dir/four.txt").is_file()
+        assert Path("/retrieved/src/dir/four.txt").read_text() == "four"
+        assert Path("/retrieved/src/dir/subdir/five.txt").is_file()
+        assert Path("/retrieved/src/dir/subdir/five.txt").read_text() == "five"
+
+    def test_restore_all__from_past__restores_all_files(self, fs, freezer):
+        initial_time, update_time = self.mock_two_states(fs, freezer)
+        restored = restore(
+            destination=self.get_destination(),
+            timestamp=int(initial_time.timestamp()),
+            out_path=Path("/retrieved"),
+        )
+
+        assert restored == 5
+        assert Path("/retrieved/src/one.txt").is_file()
+        assert Path("/retrieved/src/one.txt").read_text() == "one"
+        assert Path("/retrieved/src/two.txt").is_file()
+        assert Path("/retrieved/src/two.txt").read_text() == "two"
+        assert Path("/retrieved/src/dir/three.txt").is_file()
+        assert Path("/retrieved/src/dir/three.txt").read_text() == "three"
+        assert Path("/retrieved/src/dir/four.txt").is_file()
+        assert Path("/retrieved/src/dir/four.txt").read_text() == "four"
+        assert Path("/retrieved/src/dir/subdir/five.txt").is_file()
+        assert Path("/retrieved/src/dir/subdir/five.txt").read_text() == "five"
+
+    def test_restore_missing__missing_ok__returns_zero(self, fs, freezer):
+        initial_time, update_time = self.mock_two_states(fs, freezer)
+        restored = restore(
+            destination=self.get_destination(),
+            timestamp=int(time()),
+            out_path=Path("/retrieved"),
+            archive_path=Path("/does/not.exist"),
+            missing_ok=True,
+        )
+        assert restored == 0
+
+    def test_restore_missing__missing_not_ok__raises_exception(self, fs, freezer):
+        initial_time, update_time = self.mock_two_states(fs, freezer)
+
+        with pytest.raises(FileNotFoundError) as e:
+            restore(
+                destination=self.get_destination(),
+                timestamp=int(time()),
+                out_path=Path("/retrieved"),
+                archive_path=Path("/does/not.exist"),
+                missing_ok=False,
+            )
+        assert str(e.value) == "Requested path not found in archive"
+
+    def test_restore_missing_empty__missing_not_ok__raises_exception(self, fs, freezer):
+        with pytest.raises(FileNotFoundError) as e:
+            restore(
+                destination=self.get_destination(),
+                timestamp=int(time()),
+                out_path=Path("/retrieved"),
+                missing_ok=False,
+            )
+        assert str(e.value) == "Archive is empty"

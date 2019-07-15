@@ -140,7 +140,7 @@ def restore(
     destination: DestinationConfig,
     timestamp: int,
     out_path: Path,
-    archive_path: Optional[Path] = Path("/"),
+    archive_path: Optional[Path] = None,
     missing_ok: bool = False,
 ) -> int:
     if not isinstance(timestamp, int):
@@ -167,6 +167,9 @@ def restore(
             restored += 1
 
     if not missing_ok and not restored:
-        raise FileNotFoundError("Requested path not found in archive")
+        if archive_path:
+            raise FileNotFoundError("Requested path not found in archive")
+        else:
+            raise FileNotFoundError("Archive is empty")
 
     return restored
