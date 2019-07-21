@@ -4,10 +4,10 @@ Commands
 import click
 from pathlib import Path
 from time import time
-from typing import Optional
+from typing import Dict, Optional
 
 from .config import Config
-from .index import Changeset, database, scan, search, restore
+from .index import Changeset, Pattern, File, database, scan, search, restore
 
 
 class Timestamp(click.DateTime):  # type: ignore  # due to typeshed issue
@@ -95,10 +95,10 @@ def archive(ctx):
     type=Timestamp(),
 )
 @click.option(
-    "--path", "filter_str", help="Path to file", type=click.Path(exists=False)
+    "--pattern", "pattern_str", help="Path to file", type=click.Path(exists=False)
 )
 @click.pass_context
-def show(ctx, filter_str: Optional[str] = None, timestamp: Optional[int] = None):
+def show(ctx, pattern_str: Optional[str] = None, timestamp: Optional[int] = None):
     """
     Show the status of the archive
     """
@@ -109,25 +109,28 @@ def show(ctx, filter_str: Optional[str] = None, timestamp: Optional[int] = None)
 
     database.connect(config.index.path)
 
-    files = search(timestamp=timestamp, filter_str=filter_str)
+    files: Dict[Path, File] = search(timestamp=timestamp, pattern=Pattern(pattern_str))
 
     if not files:
-        if filter_str:
-            raise click.ClickException(f"No files found at {filter_str}")
+        if pattern_str:
+            raise click.ClickException(f"No files found at {pattern_str}")
         else:
             raise click.ClickException("No files found")
         # If no files found, code will not proceed past this condition
 
-    for file in files:
+    for path, file in sorted(files.items(), key=lambda pair: pair[0]):
         print(
             "\t".join(
                 [
-                    file.permissions,
-                    file.owner,
-                    file.group,
-                    file.archived.size,
-                    file.last_modified,
-                    file.path,
+                    str(part)
+                    for part in [
+                        file.permissions,
+                        file.owner,
+                        file.group,
+                        file.archived.size,
+                        file.last_modified,
+                        file.path,
+                    ]
                 ]
             )
         )
@@ -144,14 +147,14 @@ def show(ctx, filter_str: Optional[str] = None, timestamp: Optional[int] = None)
     type=Timestamp(),
 )
 @click.option(
-    "--archive",
-    "archive_str",
+    "--pattern",
+    "pattern_str",
     help="Path to file in archive",
     type=click.Path(exists=False),
 )
 @click.pass_context
 def cmd_restore(
-    ctx, out: str, timestamp: Optional[int] = None, archive_str: Optional[str] = None
+    ctx, out: str, timestamp: Optional[int] = None, pattern_str: Optional[str] = None
 ):
     """
     Restore from the archive
@@ -162,17 +165,11 @@ def cmd_restore(
     if not timestamp:
         timestamp = int(time())
 
-    archive_path: Optional[Path]
-    if archive_str:
-        archive_path = Path(archive_str)
-    else:
-        archive_path = None
-
     restored = restore(
         archive_config=config.archive,
         timestamp=timestamp,
         out_path=Path(out),
-        archive_path=archive_path,
+        pattern=Pattern(pattern_str),
         missing_ok=True,
     )
 

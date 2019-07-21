@@ -9,7 +9,7 @@ from time import time
 import pytest
 from pyfakefs.fake_filesystem import FakeFile
 
-from serac.index.index import get_state_at, scan, search, restore
+from serac.index.index import Pattern, get_state_at, scan, search, restore
 from serac.index.models import Action, File
 
 from ..mocks import DatabaseTest, FilesystemTest, gen_file, mock_file_archive
@@ -215,81 +215,86 @@ class IndexTestBase(DatabaseTest, FilesystemTest):
 class TestIndexSearch(IndexTestBase):
     def test_search_file__from_head__finds_single_file(self, fs, freezer):
         initial_time, update_time = self.mock_two_states(fs, freezer)
-        results = search(timestamp=int(time()), filter_str="/src/dir/three.txt")
+        results = search(timestamp=int(time()), pattern=Pattern("/src/dir/three.txt"))
 
         assert len(results) == 1
-        assert results[0].path == Path("/src/dir/three.txt")
-        assert results[0].last_modified == int(update_time.timestamp())
+        assert Path("/src/dir/three.txt") in results
+        assert results[Path("/src/dir/three.txt")].last_modified == int(
+            update_time.timestamp()
+        )
 
     def test_search_file__from_past__finds_single_file(self, fs, freezer):
         initial_time, update_time = self.mock_two_states(fs, freezer)
         results = search(
-            timestamp=int(initial_time.timestamp()), filter_str="/src/dir/three.txt"
+            timestamp=int(initial_time.timestamp()),
+            pattern=Pattern("/src/dir/three.txt"),
         )
 
         assert len(results) == 1
-        assert results[0].path == Path("/src/dir/three.txt")
-        assert results[0].last_modified == int(initial_time.timestamp())
+        assert Path("/src/dir/three.txt") in results
+        assert results[Path("/src/dir/three.txt")].last_modified == int(
+            initial_time.timestamp()
+        )
 
     def test_search_dir__from_head__finds_some_files(self, fs, freezer):
         initial_time, update_time = self.mock_two_states(fs, freezer)
-        results = search(timestamp=int(time()), filter_str="/src/dir")
-        paths = {file.path: file for file in results}
+        results = search(timestamp=int(time()), pattern=Pattern("/src/dir"))
 
         assert len(results) == 3
-        assert Path("/src/dir/three.txt") in paths
+        assert Path("/src/dir/three.txt") in results
         assert (
-            paths[Path("/src/dir/three.txt")].last_modified == update_time.timestamp()
+            results[Path("/src/dir/three.txt")].last_modified == update_time.timestamp()
         )
-        assert Path("/src/dir/four.txt") in paths
-        assert Path("/src/dir/subdir/five.txt") in paths
+        assert Path("/src/dir/four.txt") in results
+        assert Path("/src/dir/subdir/five.txt") in results
 
     def test_search_dir__from_past__finds_some_files(self, fs, freezer):
         initial_time, update_time = self.mock_two_states(fs, freezer)
-        results = search(timestamp=int(initial_time.timestamp()), filter_str="/src/dir")
-        paths = {file.path: file for file in results}
+        results = search(
+            timestamp=int(initial_time.timestamp()), pattern=Pattern("/src/dir")
+        )
 
         assert len(results) == 3
-        assert Path("/src/dir/three.txt") in paths
+        assert Path("/src/dir/three.txt") in results
         assert (
-            paths[Path("/src/dir/three.txt")].last_modified == initial_time.timestamp()
+            results[Path("/src/dir/three.txt")].last_modified
+            == initial_time.timestamp()
         )
-        assert Path("/src/dir/four.txt") in paths
-        assert Path("/src/dir/subdir/five.txt") in paths
+        assert Path("/src/dir/four.txt") in results
+        assert Path("/src/dir/subdir/five.txt") in results
 
     def test_search_all__from_head__finds_all_files(self, fs, freezer):
         initial_time, update_time = self.mock_two_states(fs, freezer)
         results = search(timestamp=int(time()))
-        paths = {file.path: file for file in results}
 
         assert len(results) == 5
-        assert Path("/src/one.txt") in paths
-        assert Path("/src/two.txt") in paths
-        assert Path("/src/dir/three.txt") in paths
+        assert Path("/src/one.txt") in results
+        assert Path("/src/two.txt") in results
+        assert Path("/src/dir/three.txt") in results
         assert (
-            paths[Path("/src/dir/three.txt")].last_modified == update_time.timestamp()
+            results[Path("/src/dir/three.txt")].last_modified == update_time.timestamp()
         )
-        assert Path("/src/dir/four.txt") in paths
-        assert Path("/src/dir/subdir/five.txt") in paths
+        assert Path("/src/dir/four.txt") in results
+        assert Path("/src/dir/subdir/five.txt") in results
 
     def test_search_all__from_past__finds_all_files(self, fs, freezer):
         initial_time, update_time = self.mock_two_states(fs, freezer)
         results = search(timestamp=int(initial_time.timestamp()))
-        paths = {file.path: file for file in results}
 
         assert len(results) == 5
-        assert Path("/src/one.txt") in paths
-        assert Path("/src/two.txt") in paths
-        assert Path("/src/dir/three.txt") in paths
+        assert Path("/src/one.txt") in results
+        assert Path("/src/two.txt") in results
+        assert Path("/src/dir/three.txt") in results
         assert (
-            paths[Path("/src/dir/three.txt")].last_modified == initial_time.timestamp()
+            results[Path("/src/dir/three.txt")].last_modified
+            == initial_time.timestamp()
         )
-        assert Path("/src/dir/four.txt") in paths
-        assert Path("/src/dir/subdir/five.txt") in paths
+        assert Path("/src/dir/four.txt") in results
+        assert Path("/src/dir/subdir/five.txt") in results
 
     def test_search_missing__returns_zero(self, fs, freezer):
         initial_time, update_time = self.mock_two_states(fs, freezer)
-        results = search(timestamp=int(time()), filter_str="/does/not.exist")
+        results = search(timestamp=int(time()), pattern=Pattern("/does/not.exist"))
         assert len(results) == 0
 
 
@@ -300,7 +305,7 @@ class TestIndexRestore(IndexTestBase):
             archive_config=self.get_archive_config(),
             timestamp=int(time()),
             out_path=Path("/retrieved"),
-            archive_path=Path("/src/dir/three.txt"),
+            pattern=Pattern("/src/dir/three.txt"),
         )
 
         assert restored == 1
@@ -313,7 +318,7 @@ class TestIndexRestore(IndexTestBase):
             archive_config=self.get_archive_config(),
             timestamp=int(initial_time.timestamp()),
             out_path=Path("/retrieved"),
-            archive_path=Path("/src/dir/three.txt"),
+            pattern=Pattern("/src/dir/three.txt"),
         )
 
         assert restored == 1
@@ -327,7 +332,7 @@ class TestIndexRestore(IndexTestBase):
             archive_config=self.get_archive_config(),
             timestamp=int(time()),
             out_path=Path("/retrieved"),
-            archive_path=Path("/src/dir"),
+            pattern=Pattern("/src/dir"),
         )
 
         assert restored == 3
@@ -344,7 +349,7 @@ class TestIndexRestore(IndexTestBase):
             archive_config=self.get_archive_config(),
             timestamp=int(initial_time.timestamp()),
             out_path=Path("/retrieved"),
-            archive_path=Path("/src/dir"),
+            pattern=Pattern("/src/dir"),
         )
 
         assert restored == 3
@@ -401,7 +406,7 @@ class TestIndexRestore(IndexTestBase):
             archive_config=self.get_archive_config(),
             timestamp=int(time()),
             out_path=Path("/retrieved"),
-            archive_path=Path("/does/not.exist"),
+            pattern=Pattern("/does/not.exist"),
             missing_ok=True,
         )
         assert restored == 0
@@ -414,7 +419,7 @@ class TestIndexRestore(IndexTestBase):
                 archive_config=self.get_archive_config(),
                 timestamp=int(time()),
                 out_path=Path("/retrieved"),
-                archive_path=Path("/does/not.exist"),
+                pattern=Pattern("/does/not.exist"),
                 missing_ok=False,
             )
         assert str(e.value) == "Requested path not found in archive"

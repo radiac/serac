@@ -43,6 +43,24 @@ class Changeset:
             file.archive(archive_config)
 
 
+class Pattern:
+    """
+    Represent a filter and process matches against a Path
+    """
+
+    def __init__(self, pattern: Optional[str]):
+        self.str = pattern or ""
+        self.path = Path(self.str)
+
+    def match(self, path: Path) -> bool:
+        if not self.str or self.path == path or self.path in path.parents:
+            return True
+        return False
+
+    def __eq__(self, other):
+        return self.str == other.str
+
+
 def get_state_at(timestamp: int) -> Dict[Path, File]:
     """
     Get the state of the index at a given timestamp
@@ -136,29 +154,21 @@ def scan(includes: List[str], excludes: Optional[List[str]] = None) -> Changeset
     return changeset
 
 
-def search(timestamp: int, filter_str: Optional[str] = None):
+def search(timestamp: int, pattern: Optional[Pattern] = None) -> Dict[Path, File]:
     """
     Search the index at the specified timestamp matching the specified filter string.
 
-    Returns a list of File objects, ordered by path
+    Returns a dict of {Path: File}
     """
     state: Dict[Path, File] = get_state_at(timestamp)
     path: Path
 
-    filter_path = None
-    if filter_str:
-        filter_path = Path(filter_str)
+    if not pattern:
+        return state
 
-    files: List[File]
-    if filter_path:
-        files = [
-            file
-            for path, file in state.items()
-            if filter_path == path or filter_path in path.parents
-        ]
-    else:
-        files = list(state.values())
-
+    files: Dict[Path, File] = {
+        path: file for path, file in state.items() if pattern.match(path)
+    }
     return files
 
 
@@ -166,7 +176,7 @@ def restore(
     archive_config: ArchiveConfig,
     timestamp: int,
     out_path: Path,
-    archive_path: Optional[Path] = None,
+    pattern: Pattern = None,
     missing_ok: bool = False,
 ) -> int:
     """
@@ -183,8 +193,15 @@ def restore(
         # This is going to be a common error, and we don't want to convert it
         # ourselves - we won't have the timezone info and we'll make a mistake
         raise ValueError("Can only restore using a timestamp")
-    state: Dict[Path, File] = get_state_at(timestamp)
 
+    state = search(timestamp=timestamp, pattern=pattern)
+
+    # Standardise out path
+    archive_path: Optional[Path]
+    if pattern:
+        archive_path = pattern.path
+    else:
+        archive_path = None
     if archive_path in state:
         if out_path.is_dir():
             out_path /= archive_path.name
