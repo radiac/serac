@@ -4,10 +4,10 @@ Commands
 import click
 from pathlib import Path
 from time import time
-from typing import Dict, Optional
+from typing import Optional
 
 from .config import Config
-from .index import Changeset, database, scan, get_state_at, File
+from .index import Changeset, database, scan, search, restore
 
 
 class Timestamp(click.DateTime):  # type: ignore  # due to typeshed issue
@@ -108,28 +108,34 @@ def show(ctx, filter_str: Optional[str] = None, timestamp: Optional[int] = None)
         timestamp = int(time())
 
     database.connect(config.index.path)
-    state: Dict[Path, File] = get_state_at(timestamp)
-    path: Path
 
-    filter_path = None
-    if filter_str:
-        filter_path = Path(filter_str)
+    files = search(timestamp=timestamp, filter_str=filter_str)
 
-    found = 0
-    for path in sorted(state):
-        if filter_path and filter_path != path and filter_path not in path.parents:
-            continue
-        found += 1
-    if not found:
-        if filter_path:
+    if not files:
+        if filter_str:
             raise click.ClickException(f"No files found at {filter_str}")
         else:
             raise click.ClickException("No files found")
+        # If no files found, code will not proceed past this condition
+
+    for file in files:
+        print(
+            "\t".join(
+                [
+                    file.permissions,
+                    file.owner,
+                    file.group,
+                    file.archived.size,
+                    file.last_modified,
+                    file.path,
+                ]
+            )
+        )
 
     database.disconnect()
 
 
-@cli.command()
+@cli.command("restore")
 @click.argument("out", type=click.Path(exists=False))
 @click.option(
     "--at",
@@ -144,7 +150,7 @@ def show(ctx, filter_str: Optional[str] = None, timestamp: Optional[int] = None)
     type=click.Path(exists=False),
 )
 @click.pass_context
-def restore(
+def cmd_restore(
     ctx, out: str, timestamp: Optional[int] = None, archive_str: Optional[str] = None
 ):
     """

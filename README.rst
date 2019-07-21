@@ -43,6 +43,25 @@ To run tests::
     pytest
 
 
+Commands
+--------
+
+`test`
+    Test the configuration file
+
+`init`
+    Initialise an index for a new config
+
+`archive`
+    Archive any changes since the last archive was performed
+
+`show`
+    Show the state of the archive (optionally at a given date)
+
+`restore`
+    Restore some or all of an archive (optionally from a given date)
+
+
 Configuration
 =============
 

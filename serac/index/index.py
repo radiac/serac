@@ -136,6 +136,32 @@ def scan(includes: List[str], excludes: Optional[List[str]] = None) -> Changeset
     return changeset
 
 
+def search(timestamp: int, filter_str: Optional[str] = None):
+    """
+    Search the index at the specified timestamp matching the specified filter string.
+
+    Returns a list of File objects, ordered by path
+    """
+    state: Dict[Path, File] = get_state_at(timestamp)
+    path: Path
+
+    filter_path = None
+    if filter_str:
+        filter_path = Path(filter_str)
+
+    files: List[File]
+    if filter_path:
+        files = [
+            file
+            for path, file in state.items()
+            if filter_path == path or filter_path in path.parents
+        ]
+    else:
+        files = list(state.values())
+
+    return files
+
+
 def restore(
     archive_config: ArchiveConfig,
     timestamp: int,
@@ -143,6 +169,16 @@ def restore(
     archive_path: Optional[Path] = None,
     missing_ok: bool = False,
 ) -> int:
+    """
+    Restore one or more files as they were at the specified timestamp, to the
+    specified out path.
+
+    If no archive path is specified, restores all files with their full paths
+    under the specified target path.
+
+    If an archive path is specified, restores that file or all files under that
+    path into the specified target path.
+    """
     if not isinstance(timestamp, int):
         # This is going to be a common error, and we don't want to convert it
         # ourselves - we won't have the timezone info and we'll make a mistake
