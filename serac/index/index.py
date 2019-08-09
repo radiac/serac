@@ -3,6 +3,7 @@ Index management
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from collections import defaultdict
 from fnmatch import fnmatchcase
 from glob import iglob
@@ -61,25 +62,47 @@ class Pattern:
         return self.str == other.str
 
 
-def get_state_at(timestamp: int) -> Dict[Path, File]:
+class State(Mapping):
     """
-    Get the state of the index at a given timestamp
+    Represent the state of the index at a specific time
     """
-    if not isinstance(timestamp, int):
-        # This is going to be a common error, and we don't want to convert it
-        # ourselves - we won't have the timezone info and we'll make a mistake
-        raise ValueError("Can only get state using a timestamp")
 
-    file_fields = File._meta.sorted_fields + [
-        fn.MAX(File.last_modified).alias("latest_modified")
-    ]
-    files = (
-        File.select(*file_fields)
-        .where(File.last_modified <= timestamp)
-        .group_by(File.path)
-        .having(File.action != Action.DELETE)
-    )
-    return {file.path: file for file in files}
+    def __init__(self, files: List[File]):
+        self._store: Mapping[Path, File] = {file.path: file for file in files}
+        super().__init__()
+
+    def __getitem__(self, key):
+        return self._store[key]
+
+    def __iter__(self):
+        return iter(self._store)
+
+    def __len__(self):
+        return len(self._store)
+
+    def pop(self, key, default):
+        return self._store.pop(key, default)
+
+    @classmethod
+    def at(cls, timestamp: int) -> State:
+        """
+        Get the state of the index at a given timestamp
+        """
+        if not isinstance(timestamp, int):
+            # This is going to be a common error, and we don't want to convert it
+            # ourselves - we won't have the timezone info and we'll make a mistake
+            raise ValueError("Can only get state using a timestamp")
+
+        file_fields = File._meta.sorted_fields + [
+            fn.MAX(File.last_modified).alias("latest_modified")
+        ]
+        files = (
+            File.select(*file_fields)
+            .where(File.last_modified <= timestamp)
+            .group_by(File.path)
+            .having(File.action != Action.DELETE)
+        )
+        return cls(files)
 
 
 def is_excluded(path: Path, excludes: List[str]) -> bool:
@@ -102,7 +125,7 @@ def scan(includes: List[str], excludes: Optional[List[str]] = None) -> Changeset
     )
 
     changeset = Changeset()
-    last_state = get_state_at(timestamp=int(time()))
+    last_state: State = State.at(timestamp=int(time()))
 
     while True:
         # Get next path
@@ -154,21 +177,19 @@ def scan(includes: List[str], excludes: Optional[List[str]] = None) -> Changeset
     return changeset
 
 
-def search(timestamp: int, pattern: Optional[Pattern] = None) -> Dict[Path, File]:
+def search(timestamp: int, pattern: Optional[Pattern] = None) -> State:
     """
     Search the index at the specified timestamp matching the specified filter string.
 
     Returns a dict of {Path: File}
     """
-    state: Dict[Path, File] = get_state_at(timestamp)
+    state: State = State.at(timestamp)
     path: Path
 
     if not pattern:
         return state
 
-    files: Dict[Path, File] = {
-        path: file for path, file in state.items() if pattern.match(path)
-    }
+    files: State = State([file for path, file in state.items() if pattern.match(path)])
     return files
 
 
@@ -202,7 +223,7 @@ def restore(
         archive_path = pattern.path
     else:
         archive_path = None
-    if archive_path in state:
+    if archive_path and archive_path in state:
         if out_path.is_dir():
             out_path /= archive_path.name
 

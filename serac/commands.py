@@ -4,10 +4,10 @@ Commands
 import click
 from pathlib import Path
 from time import time
-from typing import Dict, Optional
+from typing import Optional
 
 from .config import Config
-from .index import Changeset, Pattern, File, database, scan, search, restore
+from .index import Changeset, Pattern, State, database, scan, search, restore
 
 
 class Timestamp(click.DateTime):  # type: ignore  # due to typeshed issue
@@ -109,7 +109,7 @@ def show(ctx, pattern_str: Optional[str] = None, timestamp: Optional[int] = None
 
     database.connect(config.index.path)
 
-    files: Dict[Path, File] = search(timestamp=timestamp, pattern=Pattern(pattern_str))
+    files: State = search(timestamp=timestamp, pattern=Pattern(pattern_str))
 
     if not files:
         if pattern_str:

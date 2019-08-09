@@ -9,7 +9,7 @@ from time import time
 import pytest
 from pyfakefs.fake_filesystem import FakeFile
 
-from serac.index.index import Pattern, get_state_at, scan, search, restore
+from serac.index.index import Pattern, State, scan, search, restore
 from serac.index.models import Action, File
 
 from ..mocks import DatabaseTest, FilesystemTest, gen_file, mock_file_archive
@@ -22,7 +22,7 @@ class TestIndexGetState(DatabaseTest):
 
         file1 = gen_file(path="foo", action=Action.ADD, last_modified=earlier)
         file2 = gen_file(path="foo", action=Action.CONTENT, last_modified=now)
-        state = get_state_at(timestamp=int(now.timestamp()))
+        state = State.at(timestamp=int(now.timestamp()))
 
         assert file1 != file2
         assert state == {Path("foo"): file2}
@@ -36,7 +36,7 @@ class TestIndexGetState(DatabaseTest):
         file2 = gen_file(path="one", action=Action.CONTENT, last_modified=now)
         file3 = gen_file(path="two", action=Action.ADD, last_modified=earlier)
         file4 = gen_file(path="two", action=Action.CONTENT, last_modified=now)
-        state = get_state_at(timestamp=int(now.timestamp()))
+        state = State.at(timestamp=int(now.timestamp()))
 
         assert file1 != file2
         assert file3 != file4
@@ -52,7 +52,7 @@ class TestIndexGetState(DatabaseTest):
         file2 = gen_file(path="one", action=Action.CONTENT, last_modified=now)
         file3 = gen_file(path="two", action=Action.ADD, last_modified=earlier)
         file4 = gen_file(path="two", action=Action.CONTENT, last_modified=now)
-        state = get_state_at(timestamp=int(earlier.timestamp()))
+        state = State.at(timestamp=int(earlier.timestamp()))
 
         assert file1 != file2
         assert file3 != file4
@@ -68,7 +68,7 @@ class TestIndexGetState(DatabaseTest):
         file2 = gen_file(path="one", action=Action.CONTENT, last_modified=now)
         file3 = gen_file(path="two", action=Action.ADD, last_modified=earlier)
         file4 = gen_file(path="two", action=Action.DELETE, last_modified=now)
-        state = get_state_at(timestamp=int(now.timestamp()))
+        state = State.at(timestamp=int(now.timestamp()))
 
         assert file1 != file2
         assert file3 != file4
