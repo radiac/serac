@@ -4,16 +4,18 @@ Mock objects
 from datetime import datetime
 from pathlib import Path
 import shutil
+import socket
 from time import time
-from typing import Type
+import threading
+from typing import Type, IO
 
 import boto3
 from peewee import Database, SqliteDatabase
 
 from serac import storage
 from serac.config import ArchiveConfig
-from serac.index import database
-from serac.index import models
+from serac.index import database, models
+from serac.storage import Storage
 
 
 class BaseTest:
@@ -168,6 +170,42 @@ class MockDatabase:
 
         # Remove from models registry
         del database.models[self.test_db]
+
+
+class FlawedStorage(Storage):
+    """
+    A storage class which is intentionally flawed and will fail during upload
+    """
+
+    # Mark it as abstract so it doesn't get registered and throw the tests
+    # It will still function for testing purposes
+    abstract = True
+
+    def write(self, archive_id: str) -> IO[bytes]:
+        lock = threading.Lock()
+
+        def listen():
+            # Start server on port 8000
+            server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server.bind(("127.0.0.1", 8000))
+            server.listen(1)
+            lock.release()  # can release now the socket is ready
+            client, addr = server.accept()  # blocks until connection is made
+            client.recv(10)  # blocks until data is ready
+            client.close()
+            server.close()
+
+        # Lock until listener's socket is ready
+        lock.acquire()
+        listener = threading.Thread(target=listen, daemon=True)
+        listener.start()
+
+        # Listener's socket is ready, connect
+        lock.acquire()
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect(("127.0.0.1", 8000))
+        lock.release()
+        return client.makefile(mode="wb")
 
 
 def gen_archived(**kwargs):

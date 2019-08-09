@@ -6,13 +6,14 @@ from io import BytesIO
 from pathlib import Path
 
 from pyfakefs import fake_filesystem
+import pytest
 
 from serac import crypto
 from serac.config import ArchiveConfig
 from serac.storage import Local
 from serac.index.models import Action, Archived, File
 
-from ..mocks import DatabaseTest, FilesystemTest, gen_file
+from ..mocks import DatabaseTest, FilesystemTest, FlawedStorage, gen_file
 
 
 class TestDatabaseTest(DatabaseTest):
@@ -118,6 +119,24 @@ class TestFile(DatabaseTest, FilesystemTest):
         with dest_path.open("rb") as handle:
             crypto.decrypt(handle, decrypted, "secret", dest_path.stat().st_size)
         assert str(decrypted.getvalue(), "utf-8") == "unencrypted"
+
+    def test_archive__storage_broken__error_raised(self, fs):
+        # Create a file with enough data to overwhelm the kernel buffer
+        fs.create_file("/src/foo", contents="unencrypted" * 1024 * 1024)
+        file = File(path=Path("/src/foo"), action=Action.ADD)
+        archive_config = ArchiveConfig(storage=FlawedStorage(), password="secret")
+        file.refresh_metadata_from_disk()
+
+        with pytest.raises(ValueError) as e:
+            file.archive(archive_config)
+        assert str(e.value).startswith("Unable to archive /src/foo: ")
+
+        # Check Archived db object does not exist
+        with pytest.raises(Archived.DoesNotExist) as e:
+            assert file.archived
+        archives = Archived.select()
+        assert len(archives) == 1
+        assert archives[0].hash == ""
 
     def test_restore(self, fs):
         archive_config = ArchiveConfig(
