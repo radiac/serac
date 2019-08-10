@@ -64,6 +64,14 @@ class File(Model):
     def __str__(self):
         return str(self.path)
 
+    def __eq__(self, other):
+        """
+        Check if path and metadata match
+        """
+        return self.path == other.path and all(
+            [getattr(self, attr) == getattr(other, attr) for attr in self._meta_fields]
+        )
+
     def clone(self, **overrides) -> File:
         # Copy all field values
         attrs: Dict[str, Any] = {
@@ -103,13 +111,26 @@ class File(Model):
                 raise ValueError("Cannot access size without a metadata")
         return self._size
 
-    def __eq__(self, other):
+    @property
+    def permissions_display(self):
         """
-        Check if path and metadata match
+        Return permissions as a human-readable 10 character string, eg:
+
+            -rwxr-xr-x
         """
-        return self.path == other.path and all(
-            [getattr(self, attr) == getattr(other, attr) for attr in self._meta_fields]
-        )
+        if not self.permissions:
+            return "-" * 10
+        parts = ["-"]
+        bits = [(4, "r"), (2, "w"), (1, "x")]
+        for perm in oct(self.permissions)[-3:]:
+            perm = int(perm)
+            for bit, label in bits:
+                if perm >= bit:
+                    parts.append(label)
+                    perm -= bit
+                else:
+                    parts.append("-")
+        return "".join(parts)
 
     def calculate_hash(self, force=False):
         """

@@ -118,13 +118,13 @@ def show(ctx, pattern_str: Optional[str] = None, timestamp: Optional[int] = None
             raise click.ClickException("No files found")
         # If no files found, code will not proceed past this condition
 
-    for path, file in sorted(files.items(), key=lambda pair: pair[0]):
+    for file in files.by_path():
         print(
             "\t".join(
                 [
                     str(part)
                     for part in [
-                        file.permissions,
+                        file.permissions_display,
                         file.owner,
                         file.group,
                         file.archived.size,

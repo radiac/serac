@@ -104,6 +104,12 @@ class State(Mapping):
         )
         return cls(files)
 
+    def by_path(self):
+        """
+        Return a list of files, sorted by path
+        """
+        return sorted(self.values(), key=lambda file: file.path)
+
 
 def is_excluded(path: Path, excludes: List[str]) -> bool:
     for pattern in excludes:

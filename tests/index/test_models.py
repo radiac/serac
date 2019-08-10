@@ -156,3 +156,29 @@ class TestFile(DatabaseTest, FilesystemTest):
         decrypted = Path("/restore/file")
         with decrypted.open("r") as handle:
             assert handle.read() == "unencrypted"
+
+
+class TestFilePermissions:
+    """
+    Test of permissions_display
+    """
+
+    def assert_permission(self, mask, human):
+        file = File()
+        file.permissions = int(str(mask), 8)
+        assert file.permissions_display == human
+
+    def test_no_bits(self):
+        self.assert_permission(0, "-" * 10)
+
+    def test_read_all(self):
+        self.assert_permission(444, "-r--r--r--")
+
+    def test_read_write_owner__read_others(self):
+        self.assert_permission(644, "-rw-r--r--")
+
+    def test_read_write_execute_owner__read_execute_group__read_public(self):
+        self.assert_permission(754, "-rwxr-xr--")
+
+    def test_execute_owner__write_group__write_execute_public(self):
+        self.assert_permission(123, "---x-w--wx")
