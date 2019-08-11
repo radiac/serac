@@ -2,6 +2,7 @@
 Commands
 """
 import click
+from datetime import datetime
 from pathlib import Path
 from time import time
 from typing import Optional
@@ -98,7 +99,7 @@ def archive(ctx):
     "--pattern", "pattern_str", help="Path to file", type=click.Path(exists=False)
 )
 @click.pass_context
-def show(ctx, pattern_str: Optional[str] = None, timestamp: Optional[int] = None):
+def ls(ctx, pattern_str: Optional[str] = None, timestamp: Optional[int] = None):
     """
     Show the status of the archive
     """
@@ -118,28 +119,27 @@ def show(ctx, pattern_str: Optional[str] = None, timestamp: Optional[int] = None
             raise click.ClickException("No files found")
         # If no files found, code will not proceed past this condition
 
+    this_year = str(datetime.now().astimezone().year)
     for file in files.by_path():
+        size_num, size_unit = file.archived.get_human_size()
+        m_month, m_day, m_year, m_time = file.get_human_last_modified()
         print(
-            "\t".join(
-                [
-                    str(part)
-                    for part in [
-                        file.permissions_display,
-                        file.owner,
-                        file.group,
-                        file.archived.size,
-                        file.last_modified,
-                        file.path,
-                    ]
-                ]
-            )
+            f"{file.permissions_display} "
+            f"{file.owner_display:<8.8} "
+            f"{file.group_display:<8.8} "
+            f"{int(size_num):>4} "
+            f"{size_unit:<2} "
+            f"{m_month:<3} {m_day.lstrip('0'):>2} "
+            f"{m_time if m_year == this_year else m_year:>5} "
+            f"{file.last_modified} "
+            f"{file.path}"
         )
 
     database.disconnect()
 
 
 @cli.command("restore")
-@click.argument("out", type=click.Path(exists=False))
+@click.argument("destination", type=click.Path(exists=False))
 @click.option(
     "--at",
     "timestamp",
@@ -154,7 +154,10 @@ def show(ctx, pattern_str: Optional[str] = None, timestamp: Optional[int] = None
 )
 @click.pass_context
 def cmd_restore(
-    ctx, out: str, timestamp: Optional[int] = None, pattern_str: Optional[str] = None
+    ctx,
+    destination: str,
+    timestamp: Optional[int] = None,
+    pattern_str: Optional[str] = None,
 ):
     """
     Restore from the archive
@@ -168,7 +171,7 @@ def cmd_restore(
     restored = restore(
         archive_config=config.archive,
         timestamp=timestamp,
-        out_path=Path(out),
+        destination_path=Path(destination),
         pattern=Pattern(pattern_str),
         missing_ok=True,
     )

@@ -28,13 +28,16 @@ During development, install in a virtual environment::
 Usage
 =====
 
+Serac must always be run with the config file path as the first argument, then
+the command to perform as the second argument.
+
 To run serac::
 
-    /path/to/venv/bin/serac /path/to/serac.conf COMMAND [OPTIONS]
+    /path/to/venv/bin/serac CONFIG COMMAND [OPTIONS]
 
 To run during development::
 
-    python -m serac.commands /path/to/search.conf COMMAND [OPTIONS]
+    python -m serac.commands CONFIG COMMAND [OPTIONS]
 
 To run tests::
 
@@ -46,20 +49,42 @@ To run tests::
 Commands
 --------
 
+After that it accepts one of the following commands:
+
 `test`
     Test the configuration file
 
 `init`
-    Initialise an index for a new config
+    Initialise an index for a new config by creating the database
 
 `archive`
     Archive any changes since the last archive was performed
 
-`show`
-    Show the state of the archive (optionally at a given date)
+`ls [--at=DATE] [--pattern=PATTERN]`
+    Show the state of the archive.
 
-`restore`
-    Restore some or all of an archive (optionally from a given date)
+    This follows the roughly the same layout as `ls -l`, with the following columns:
+
+        * File permissions
+        * Owner (as it will be restored to on this system)
+        * Group (as it will be restored to on this system)
+        * Size (in kibi/mebib/gibibytes, or in bytes if not specified)
+        * Last modified date (this year if not specified)
+        * Last modified timestamp (temporary - for use in calls to `ls` and `restore`)
+        * Path (as it was on the originating system)
+
+`restore DESTINATION [--at=DATE] [--pattern=PATTERN]`
+    Restore some or all of an archive
+
+Arguments
+~~~~~~~~~
+
+`DATE`
+    This must be a unix timestamp. Date strings are not yet supported.
+
+`PATTERN`
+    This can either be an exact path to a file, or a partial path to a directory.
+    Globs are not yet supported.
 
 
 Configuration

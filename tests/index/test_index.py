@@ -304,7 +304,7 @@ class TestIndexRestore(IndexTestBase):
         restored = restore(
             archive_config=self.get_archive_config(),
             timestamp=int(time()),
-            out_path=Path("/retrieved"),
+            destination_path=Path("/retrieved"),
             pattern=Pattern("/src/dir/three.txt"),
         )
 
@@ -317,7 +317,7 @@ class TestIndexRestore(IndexTestBase):
         restored = restore(
             archive_config=self.get_archive_config(),
             timestamp=int(initial_time.timestamp()),
-            out_path=Path("/retrieved"),
+            destination_path=Path("/retrieved"),
             pattern=Pattern("/src/dir/three.txt"),
         )
 
@@ -331,7 +331,7 @@ class TestIndexRestore(IndexTestBase):
         restored = restore(
             archive_config=self.get_archive_config(),
             timestamp=int(time()),
-            out_path=Path("/retrieved"),
+            destination_path=Path("/retrieved"),
             pattern=Pattern("/src/dir"),
         )
 
@@ -348,7 +348,7 @@ class TestIndexRestore(IndexTestBase):
         restored = restore(
             archive_config=self.get_archive_config(),
             timestamp=int(initial_time.timestamp()),
-            out_path=Path("/retrieved"),
+            destination_path=Path("/retrieved"),
             pattern=Pattern("/src/dir"),
         )
 
@@ -365,7 +365,7 @@ class TestIndexRestore(IndexTestBase):
         restored = restore(
             archive_config=self.get_archive_config(),
             timestamp=int(time()),
-            out_path=Path("/retrieved"),
+            destination_path=Path("/retrieved"),
         )
 
         assert restored == 5
@@ -385,7 +385,7 @@ class TestIndexRestore(IndexTestBase):
         restored = restore(
             archive_config=self.get_archive_config(),
             timestamp=int(initial_time.timestamp()),
-            out_path=Path("/retrieved"),
+            destination_path=Path("/retrieved"),
         )
 
         assert restored == 5
@@ -405,7 +405,7 @@ class TestIndexRestore(IndexTestBase):
         restored = restore(
             archive_config=self.get_archive_config(),
             timestamp=int(time()),
-            out_path=Path("/retrieved"),
+            destination_path=Path("/retrieved"),
             pattern=Pattern("/does/not.exist"),
             missing_ok=True,
         )
@@ -418,7 +418,7 @@ class TestIndexRestore(IndexTestBase):
             restore(
                 archive_config=self.get_archive_config(),
                 timestamp=int(time()),
-                out_path=Path("/retrieved"),
+                destination_path=Path("/retrieved"),
                 pattern=Pattern("/does/not.exist"),
                 missing_ok=False,
             )
@@ -429,7 +429,7 @@ class TestIndexRestore(IndexTestBase):
             restore(
                 archive_config=self.get_archive_config(),
                 timestamp=int(time()),
-                out_path=Path("/retrieved"),
+                destination_path=Path("/retrieved"),
                 missing_ok=False,
             )
         assert str(e.value) == "Archive is empty"

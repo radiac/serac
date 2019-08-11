@@ -202,13 +202,13 @@ def search(timestamp: int, pattern: Optional[Pattern] = None) -> State:
 def restore(
     archive_config: ArchiveConfig,
     timestamp: int,
-    out_path: Path,
+    destination_path: Path,
     pattern: Pattern = None,
     missing_ok: bool = False,
 ) -> int:
     """
     Restore one or more files as they were at the specified timestamp, to the
-    specified out path.
+    specified destination path.
 
     If no archive path is specified, restores all files with their full paths
     under the specified target path.
@@ -223,15 +223,15 @@ def restore(
 
     state = search(timestamp=timestamp, pattern=pattern)
 
-    # Standardise out path
+    # Standardise destination path
     archive_path: Optional[Path]
     if pattern:
         archive_path = pattern.path
     else:
         archive_path = None
     if archive_path and archive_path in state:
-        if out_path.is_dir():
-            out_path /= archive_path.name
+        if destination_path.is_dir():
+            destination_path /= archive_path.name
 
     path: Path
     file: File
@@ -239,9 +239,9 @@ def restore(
     for path, file in state.items():
         if not archive_path or archive_path == path or archive_path in path.parents:
             if archive_path:
-                target_path = out_path / file.path.relative_to(archive_path)
+                target_path = destination_path / file.path.relative_to(archive_path)
             else:
-                target_path = out_path / file.path.relative_to("/")
+                target_path = destination_path / file.path.relative_to("/")
             target_path.parent.mkdir(parents=True, exist_ok=True)
             file.restore(archive_config=archive_config, to=target_path)
             restored += 1

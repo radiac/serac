@@ -160,7 +160,7 @@ class TestFile(DatabaseTest, FilesystemTest):
 
 class TestFilePermissions:
     """
-    Test of permissions_display
+    Test of File.permissions_display
     """
 
     def assert_permission(self, mask, human):
@@ -182,3 +182,33 @@ class TestFilePermissions:
 
     def test_execute_owner__write_group__write_execute_public(self):
         self.assert_permission(123, "---x-w--wx")
+
+
+class TestArchivedHumanSize:
+    """
+    Test of Archived.get_human_size
+    """
+
+    def assert_size(self, bytes, size, unit):
+        archived = Archived()
+        archived.size = bytes
+        actual = archived.get_human_size()
+        assert actual == (size, unit)
+
+    def test_bytes(self):
+        self.assert_size(1000, 1000, "")
+
+    def test_kibibytes(self):
+        self.assert_size(1000 * 1024, 1000, "k")
+
+    def test_mebibyte(self):
+        self.assert_size(1000 * 1024 * 1024, 1000, "m")
+
+    def test_gibibyte(self):
+        self.assert_size(1000 * 1024 * 1024 * 1024, 1000, "g")
+
+    def test_tebibyte(self):
+        self.assert_size(1000 * 1024 * 1024 * 1024 * 1024, 1000, "t")
+
+    def test_pebibyte(self):
+        self.assert_size(1000 * 1024 * 1024 * 1024 * 1024 * 1024, 1000 * 1024, "t")
