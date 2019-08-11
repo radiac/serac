@@ -148,7 +148,7 @@ class File(Model):
                 if self.archived:
                     return self.archived.size
             except Archived.DoesNotExist:
-                raise ValueError("Cannot access size without a metadata")
+                raise ValueError("Cannot access size without metadata")
         return self._size  # type: ignore  # mypy doesn't understand
 
     @property
@@ -226,6 +226,11 @@ class File(Model):
 
         Creates Archived object and sets it on this object, saving this File object
         """
+        # Ensure this object is not yet in the database
+        # If it is, it will already have been archived (File.archived is required)
+        if self.id:
+            raise ValueError("Cannot archive a file twice")
+
         # Create Archived object with hash to get ID
         # This should be created regardless of whether the archive succeeds
         archived = Archived.create(hash=self.calculate_hash(), size=self.size)
@@ -242,11 +247,6 @@ class File(Model):
             # Null the Archived hash rather than delete it, to prevent it being reused
             archived.hash = ""
             archived.save()
-
-            # Remove this entry from the database to allow it to be re-run
-            if self.id:
-                self.delete()
-
             raise ValueError(f"Unable to archive {self.path}: {e}")
 
         else:

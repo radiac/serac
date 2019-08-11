@@ -2,8 +2,10 @@
 Test serac/index/models.py
 """
 from datetime import datetime, timedelta
+import grp
 from io import BytesIO
 from pathlib import Path
+import pwd
 
 from pyfakefs import fake_filesystem
 import pytest
@@ -11,7 +13,15 @@ import pytest
 from serac import crypto
 from serac.config import ArchiveConfig
 from serac.storage import Local
-from serac.index.models import Action, Archived, File
+from serac.index.models import (
+    _uid_cache,
+    _gid_cache,
+    uid_to_name,
+    gid_to_name,
+    Action,
+    Archived,
+    File,
+)
 
 from ..mocks import DatabaseTest, FilesystemTest, FlawedStorage, gen_file
 
@@ -55,7 +65,24 @@ class TestFile(DatabaseTest, FilesystemTest):
     Test the File model
     """
 
-    def test_metadata_collected(self, freezer, fs):
+    def test_to_string(self):
+        file = File(path=Path("/tmp/foo"))
+        assert str(file) == "/tmp/foo"
+
+    def test_metadata__file_missing__raises_exception(self, fs):
+        file = File(path=Path("/tmp/foo"))
+        with pytest.raises(ValueError) as e:
+            file.refresh_metadata_from_disk()
+        assert str(e.value) == "File /tmp/foo has disappeared"
+
+    def test_metadata__file_not_a_file__raises_exception(self, fs):
+        fs.create_dir("/tmp/foo")
+        file = File(path=Path("/tmp/foo"))
+        with pytest.raises(ValueError) as e:
+            file.refresh_metadata_from_disk()
+        assert str(e.value) == "File /tmp/foo is not a file"
+
+    def test_metadata__collected(self, freezer, fs):
         frozen_time = datetime(2001, 1, 1, 1, 1, 1)
         freezer.move_to(frozen_time)
 
@@ -72,7 +99,7 @@ class TestFile(DatabaseTest, FilesystemTest):
         assert file.owner == uid
         assert file.group == gid
 
-    def test_metadata_collected__last_modified_change_detected(self, fs, freezer):
+    def test_metadata__collected__last_modified_change_detected(self, fs, freezer):
         # Create file
         frozen_time = datetime(2001, 1, 1, 1, 1, 1)
         freezer.move_to(frozen_time)
@@ -93,6 +120,12 @@ class TestFile(DatabaseTest, FilesystemTest):
         assert file.last_modified == frozen_time.timestamp()
         assert file_modified.last_modified == frozen_time_modified.timestamp()
         assert file != file_modified
+
+    def test_size__before_metadata__raises_exception(self, fs):
+        file = File(path=Path("/tmp/foo"))
+        with pytest.raises(ValueError) as e:
+            file.size
+        assert str(e.value) == "Cannot access size without metadata"
 
     def test_archive(self, fs):
         fs.create_file("/src/foo", contents="unencrypted")
@@ -120,7 +153,7 @@ class TestFile(DatabaseTest, FilesystemTest):
             crypto.decrypt(handle, decrypted, "secret", dest_path.stat().st_size)
         assert str(decrypted.getvalue(), "utf-8") == "unencrypted"
 
-    def test_archive__storage_broken__error_raised(self, fs):
+    def test_archive_file__storage_broken__error_raised(self, fs):
         # Create a file with enough data to overwhelm the kernel buffer
         fs.create_file("/src/foo", contents="unencrypted" * 1024 * 1024)
         file = File(path=Path("/src/foo"), action=Action.ADD)
@@ -131,9 +164,12 @@ class TestFile(DatabaseTest, FilesystemTest):
             file.archive(archive_config)
         assert str(e.value).startswith("Unable to archive /src/foo: ")
 
-        # Check Archived db object does not exist
-        with pytest.raises(Archived.DoesNotExist) as e:
-            assert file.archived
+        # Check File object does not exist in db
+        assert file.id is None
+        files = File.select()
+        assert len(files) == 0
+
+        # Check the archived object does exist
         archives = Archived.select()
         assert len(archives) == 1
         assert archives[0].hash == ""
@@ -156,6 +192,69 @@ class TestFile(DatabaseTest, FilesystemTest):
         decrypted = Path("/restore/file")
         with decrypted.open("r") as handle:
             assert handle.read() == "unencrypted"
+
+
+class TestUserGroup:
+    """
+    Test uid_to_name, gid_to_name, File.user_display and File.group_display
+
+    We're not disabling the caches, so each test needs to use a separate ID
+    """
+
+    def teardown_method(self):
+        _uid_cache.clear()
+        _gid_cache.clear()
+
+    def test_uid_known__returns_name(self, monkeypatch, mocker):
+        def return_name(uid):
+            assert uid == 100
+            obj = mocker.MagicMock(name="pw_name")
+            obj.pw_name = "foo"
+            return obj
+
+        monkeypatch.setattr(pwd, "getpwuid", return_name)
+
+        assert uid_to_name(100) == "foo"
+
+    def test_uid_unknown__returns_uid(self, monkeypatch):
+        def return_name(uid):
+            raise KeyError("Unknown")
+
+        monkeypatch.setattr(pwd, "getpwuid", return_name)
+
+        assert uid_to_name(100) == "100"
+
+    def test_file_user_display(self, monkeypatch):
+        # Monkeypatch something to raise an AttributeError and return the ID as a str
+        monkeypatch.setattr(pwd, "getpwuid", lambda x: None)
+        file = File()
+        file.owner = 100
+        assert file.owner_display == "100"
+
+    def test_gid_known__returns_name(self, monkeypatch, mocker):
+        def return_name(gid):
+            assert gid == 100
+            obj = mocker.MagicMock(name="gr_name")
+            obj.gr_name = "foo"
+            return obj
+
+        monkeypatch.setattr(grp, "getgrgid", return_name)
+
+        assert gid_to_name(100) == "foo"
+
+    def test_gid_unknown__returns_gid(self, monkeypatch):
+        def return_name(gid):
+            raise KeyError("Unknown")
+
+        monkeypatch.setattr(grp, "getgrgid", return_name)
+
+        assert gid_to_name(100) == "100"
+
+    def test_file_group_display(self, monkeypatch):
+        monkeypatch.setattr(grp, "getgrgid", lambda x: None)
+        file = File()
+        file.group = 100
+        assert file.group_display == "100"
 
 
 class TestFilePermissions:
@@ -182,6 +281,22 @@ class TestFilePermissions:
 
     def test_execute_owner__write_group__write_execute_public(self):
         self.assert_permission(123, "---x-w--wx")
+
+
+class TestFileHumanLastModified:
+    """
+    Test of File.get_human_last_modified
+    """
+
+    def test_not_set(self):
+        file = File()
+        assert file.get_human_last_modified() == ["", "", "", ""]
+
+    def test_timestamp_converted(self):
+        now = datetime(2001, 1, 2, 3, 4, 5)
+        file = File()
+        file.last_modified = now.timestamp()
+        assert file.get_human_last_modified() == ["Jan", "02", "2001", "03:04"]
 
 
 class TestArchivedHumanSize:

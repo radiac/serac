@@ -15,7 +15,15 @@ from serac.index.models import Action, File
 from ..mocks import DatabaseTest, FilesystemTest, gen_file, mock_file_archive
 
 
-class TestIndexGetState(DatabaseTest):
+class TestIndexPattern:
+    def test_pattern_eq__is_equal(self):
+        assert Pattern("/foo") == Pattern("/foo")
+
+    def test_pattern_eq__is_not_equal(self):
+        assert Pattern("/foo") != Pattern("/bar")
+
+
+class TestIndexState(DatabaseTest):
     def test_single_entry__get_latest(self):
         now = datetime.now()
         earlier = now - timedelta(days=7)
@@ -74,6 +82,22 @@ class TestIndexGetState(DatabaseTest):
         assert file3 != file4
         assert state == {Path("one"): file2}
         assert state[Path("one")].action == Action.CONTENT
+
+    def test_state_at_datetime__raise_exception(self):
+        now = datetime.now()
+
+        with pytest.raises(ValueError) as e:
+            State.at(timestamp=now)
+        assert str(e.value) == "Can only get state using a timestamp"
+
+    def test_state_by_path__returns_in_order(self):
+        now = datetime.now()
+
+        file1 = gen_file(path="b", action=Action.ADD, last_modified=now)
+        file2 = gen_file(path="a", action=Action.CONTENT, last_modified=now)
+        state = State.at(timestamp=int(now.timestamp()))
+
+        assert state.by_path() == [file2, file1]
 
 
 class TestIndexScan(DatabaseTest, FilesystemTest):
@@ -433,3 +457,15 @@ class TestIndexRestore(IndexTestBase):
                 missing_ok=False,
             )
         assert str(e.value) == "Archive is empty"
+
+    def test_state_at_datetime__raise_exception(self, fs):
+        now = datetime.now()
+
+        with pytest.raises(ValueError) as e:
+            restore(
+                archive_config=self.get_archive_config(),
+                timestamp=now,
+                destination_path=Path("/retrieved"),
+                missing_ok=False,
+            )
+        assert str(e.value) == "Can only restore using a timestamp"

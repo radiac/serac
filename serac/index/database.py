@@ -4,7 +4,6 @@ Database object
 from __future__ import annotations
 
 from collections import defaultdict
-from contextlib import contextmanager
 from enum import IntEnum
 from pathlib import Path
 from typing import Any, DefaultDict, Dict, List, Type
@@ -47,13 +46,6 @@ def disconnect(database: Database = None) -> None:
         database = get_current_db()
 
     database.close()
-
-
-@contextmanager
-def db(path: Path, create: bool = False, database: Database = None):
-    connect(path, create, database)
-    yield
-    disconnect()
 
 
 class ModelMeta(type(BaseModel)):  # type: ignore # see mypy #4284

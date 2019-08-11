@@ -28,7 +28,7 @@ class SectionConfig:
 
     @classmethod
     def parse_config(self, section: SectionProxy) -> Dict[str, Any]:
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
 
 @dataclass
@@ -114,12 +114,14 @@ class Config:
 
     def load(self, path: Path) -> None:
         parser = ConfigParser()
+
+        # Let parsing errors go through unchanged
         parser.read(path)
 
         if sorted(parser.sections()) != sorted(self.sections):
             raise ValueError(
                 "Invalid config file; must contain source, archive and "
-                f'index sections; instead found {", ".join(parser.sections())}'
+                f"index sections; instead found {', '.join(parser.sections())}"
             )
 
         self.source = SourceConfig.from_config(parser["source"])

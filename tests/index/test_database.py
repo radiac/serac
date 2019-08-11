@@ -1,17 +1,56 @@
 """
 Test serac/index/database.py
 """
-from peewee import CharField
+from pathlib import Path
 
-from serac.index.database import Model
+from peewee import CharField, SqliteDatabase
+import pytest
+
+from serac.index.database import (
+    Model,
+    get_current_db,
+    set_current_db,
+    connect,
+    disconnect,
+)
 
 from ..mocks import MockDatabase
 
 
 def test_connect():
-    with MockDatabase() as test_db:  # noqa
+    with MockDatabase() as test_db:  # noqa  # assign to var to have it in scope
 
         class FakeModel(Model):
             name = CharField()
 
     FakeModel.create(name="test")
+
+
+def test_connect__does_not_exist__raises_exception(fs):
+    # Stash main db and prep test db
+    test_db = SqliteDatabase(None)
+    main_db = get_current_db()
+    set_current_db(test_db)
+
+    with pytest.raises(ValueError) as e:
+        connect(path=Path("/does/not/exist.sqlite"), database=test_db)
+    assert str(e.value) == "Database does not exist"
+
+    # Restore to main db
+    set_current_db(main_db)
+
+
+def test_disconnect__closes(mocker):
+    # Stash main db and create test db
+    main_db = get_current_db()
+
+    class MockDb:
+        close = mocker.stub()
+
+    mock_db = MockDb()
+    set_current_db(mock_db)
+
+    disconnect()
+    mock_db.close.assert_called_once()
+
+    set_current_db(main_db)

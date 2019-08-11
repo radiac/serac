@@ -17,7 +17,7 @@ from peewee import fn
 from .models import Action, File, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..config import ArchiveConfig
+    from ..config import ArchiveConfig  # pragma: no cover
 
 
 class Changeset:
@@ -49,8 +49,8 @@ class Pattern:
     Represent a filter and process matches against a Path
     """
 
-    def __init__(self, pattern: Optional[str]):
-        self.str = pattern or ""
+    def __init__(self, pattern: str):
+        self.str = pattern
         self.path = Path(self.str)
 
     def match(self, path: Path) -> bool:
