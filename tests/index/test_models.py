@@ -174,6 +174,22 @@ class TestFile(DatabaseTest, FilesystemTest):
         assert len(archives) == 1
         assert archives[0].hash == ""
 
+    def test_archive_twice__action_forbidden_error_raised(self, fs):
+        # This is such an edge case, but test for it to be safe
+        fs.create_file("/src/foo", contents="unencrypted")
+        fs.create_dir("/dest")
+        file = File(path=Path("/src/foo"), action=Action.ADD)
+        archive_config = ArchiveConfig(
+            storage=Local(path=Path("/dest/")), password="secret"
+        )
+        file.refresh_metadata_from_disk()
+        file.archive(archive_config)
+
+        # Now archive it again
+        with pytest.raises(ValueError) as e:
+            file.archive(archive_config)
+        assert str(e.value) == "Cannot archive a file twice"
+
     def test_restore(self, fs):
         archive_config = ArchiveConfig(
             storage=Local(path=Path("/dest/")), password="secret"

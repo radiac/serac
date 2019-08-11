@@ -49,8 +49,8 @@ class Pattern:
     Represent a filter and process matches against a Path
     """
 
-    def __init__(self, pattern: str):
-        self.str = pattern
+    def __init__(self, pattern: Optional[str]):
+        self.str = pattern or ""
         self.path = Path(self.str)
 
     def match(self, path: Path) -> bool:

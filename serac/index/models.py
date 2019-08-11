@@ -15,7 +15,7 @@ from peewee import CharField, IntegerField, ForeignKeyField, TextField
 from .database import Model, EnumField, PathField
 
 if TYPE_CHECKING:
-    from ..config import ArchiveConfig
+    from ..config import ArchiveConfig  # pragma: no cover
 
 
 _uid_cache: Dict[int, str] = {}

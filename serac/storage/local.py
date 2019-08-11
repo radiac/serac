@@ -9,7 +9,7 @@ from typing import Any, Dict, IO, TYPE_CHECKING
 from .base import Storage
 
 if TYPE_CHECKING:
-    from configparser import ConfigParser
+    from configparser import ConfigParser  # pragma: no cover
 
 
 class Local(Storage):
@@ -21,12 +21,12 @@ class Local(Storage):
 
     @classmethod
     def parse_config(cls, config: ConfigParser) -> Dict[str, Any]:
-        return {"path": Path(config.get("path", ""))}
-
-    def __init__(self, path: Path) -> None:
+        path = config.get("path", "")
         if not path:
             raise ValueError("Local storage requires a path")
+        return {"path": Path(path)}
 
+    def __init__(self, path: Path) -> None:
         self.path = path
 
     def get_size(self, archive_id: str) -> int:

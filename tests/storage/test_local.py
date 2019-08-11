@@ -1,8 +1,11 @@
 """
 Test serac/storage/s3.py
 """
+from configparser import ConfigParser
 from io import BytesIO
 from pathlib import Path
+
+import pytest
 
 from serac import crypto
 from serac.storage import Local
@@ -11,6 +14,19 @@ from ..mocks import FilesystemTest
 
 
 class TestLocal(FilesystemTest):
+    def test_init__path_required(self):
+        parser = ConfigParser()
+        parser.read_string(
+            """
+            [archive]
+            storage = local
+            """
+        )
+
+        with pytest.raises(ValueError) as e:
+            Local.parse_config(parser["archive"])
+        assert str(e.value) == "Local storage requires a path"
+
     def test_store(self, fs):
         # This will be tested in a separate test, but we'll focus on the store aspect
         fs.create_file("/src/foo", contents="unencrypted")

@@ -35,7 +35,9 @@ class Storage(metaclass=StorageType):
 
     @classmethod
     def parse_config(cls, config: ConfigParser) -> Dict[str, Any]:
-        return {}
+        raise NotImplementedError(
+            "Storage.parse_config must be implemented by subclasses"
+        )  # pragma: no cover
 
     def store(self, local_path: Path, archive_id: str, password: str) -> None:
         source: IO[bytes]
@@ -56,16 +58,22 @@ class Storage(metaclass=StorageType):
         """
         Return the size of the file
         """
-        raise NotImplementedError("Storage.get_size must be implemented by subclasses")
+        raise NotImplementedError(
+            "Storage.get_size must be implemented by subclasses"
+        )  # pragma: no cover
 
     def read(self, archive_id: str) -> IO[bytes]:
         """
         Return an IO object to read from
         """
-        raise NotImplementedError("Storage.read must be implemented by subclasses")
+        raise NotImplementedError(
+            "Storage.read must be implemented by subclasses"
+        )  # pragma: no cover
 
     def write(self, archive_id: str) -> IO[bytes]:
         """
         Return an IO object to write to
         """
-        raise NotImplementedError("Storage.write must be implemented by subclasses")
+        raise NotImplementedError(
+            "Storage.write must be implemented by subclasses"
+        )  # pragma: no cover
