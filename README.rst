@@ -123,6 +123,6 @@ Configure serac using a config file::
     [index]
     # Define how indexed files are treated
 
-    # Location where indexes are stored
+    # Location for index database
     # This should then be backed up by another service, eg duplicity
-    path = /path/to/indexes
+    path = /path/to/index.sqlite

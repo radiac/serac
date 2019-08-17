@@ -18,10 +18,38 @@ from serac.storage import S3
 from ..mocks import FilesystemTest
 
 
+class TestS3Config:
+    """
+    Generic class tests
+    """
+
+    def test_init__missing_key__raises_exception(self):
+        with pytest.raises(ValueError) as e:
+            S3(key="", secret="secret", bucket="bucket", path="path")
+        assert str(e.value) == "S3 storage requires a key"
+
+    def test_init__missing_secret__raises_exception(self):
+        with pytest.raises(ValueError) as e:
+            S3(key="key", secret="", bucket="bucket", path="path")
+        assert str(e.value) == "S3 storage requires a secret"
+
+    def test_init__missing_bucket__raises_exception(self):
+        with pytest.raises(ValueError) as e:
+            S3(key="key", secret="secret", bucket="", path="path")
+        assert str(e.value) == "S3 storage requires a bucket"
+
+    def test_init__missing_path__no_exception_raised(self):
+        S3(key="key", secret="secret", bucket="bucket", path="")
+
+
 @pytest.mark.skipif(
     not os.getenv("SERAC_TEST_S3", ""), reason="Not running S3 integration tests"
 )
-class TestS3(FilesystemTest):
+class TestS3Integration(FilesystemTest):
+    """
+    S3 integration tests
+    """
+
     @property
     def storage_S3(self):
         return S3(

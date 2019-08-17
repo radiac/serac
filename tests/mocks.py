@@ -208,6 +208,20 @@ class FlawedStorage(Storage):
         return client.makefile(mode="wb")
 
 
+class TmpFs:
+    def __init__(self, filename):
+        self.filename = filename
+        self.path = f"/tmp/_serac_test_{self.filename}"
+
+    def __enter__(self):
+        return self.path
+
+    def __exit__(self, *args):
+        path = Path(self.path)
+        if path.exists():
+            path.unlink()
+
+
 def gen_archived(**kwargs):
     attrs = dict(hash="abc", size=123)
     attrs.update(kwargs)
@@ -269,9 +283,9 @@ password = l0ng_s3cr3t
 [index]
 # Define how indexed files are treated
 
-# Location where indexes are stored
+# Location for index database
 # This should then be backed up by another service, eg duplicity
-path = /path/to/indexes
+path = /path/to/index.sqlite
 """
 
 SAMPLE_STORAGE_LOCAL = """# Backup to a local path

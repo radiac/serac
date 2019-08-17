@@ -10,11 +10,25 @@ from serac.index.database import (
     Model,
     get_current_db,
     set_current_db,
+    create_db,
     connect,
     disconnect,
 )
 
-from ..mocks import MockDatabase
+from ..mocks import MockDatabase, TmpFs
+
+
+def test_create():
+    # Database uses C libraries so doesn't work with pyfakefs
+    test_db = SqliteDatabase(None)
+    main_db = get_current_db()
+    set_current_db(test_db)
+
+    with TmpFs("index.sqlite") as filename:
+        create_db(path=Path(filename))
+
+    # Restore to main db
+    set_current_db(main_db)
 
 
 def test_connect():
@@ -33,7 +47,7 @@ def test_connect__does_not_exist__raises_exception(fs):
     set_current_db(test_db)
 
     with pytest.raises(ValueError) as e:
-        connect(path=Path("/does/not/exist.sqlite"), database=test_db)
+        connect(path=Path("/does/not/exist.sqlite"))
     assert str(e.value) == "Database does not exist"
 
     # Restore to main db

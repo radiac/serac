@@ -21,7 +21,7 @@ class Timestamp(click.DateTime):  # type: ignore  # due to typeshed issue
 
     def convert(self, value, param, ctx) -> int:
         if value.isdigit():
-            return value
+            return int(value)
         try:
             dt = super().convert(value, param, ctx)
         except click.BadParameter:
@@ -32,8 +32,8 @@ class Timestamp(click.DateTime):  # type: ignore  # due to typeshed issue
             )
         return int(dt.timestamp())
 
-    def __repr__(self):
-        return "Timstamp"
+    def __repr__(self):  # pragma: no cover
+        return "Timestamp"
 
 
 @click.group()
@@ -168,7 +168,7 @@ def cmd_restore(
     if not timestamp:
         timestamp = int(time())
 
-    restored = restore(
+    restored: int = restore(
         archive_config=config.archive,
         timestamp=timestamp,
         destination_path=Path(destination),
@@ -184,5 +184,5 @@ def cmd_restore(
     database.disconnect()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     cli(obj={})

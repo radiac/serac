@@ -16,7 +16,7 @@ def test_parser_source__valid(fs):
     fs.create_file(
         "/sample.conf", contents=SAMPLE_CONFIG.format(storage=SAMPLE_STORAGE_LOCAL)
     )
-    fs.create_dir("/path/to/indexes")
+    fs.create_dir("/path/to")
     fs.create_dir("/path/to/backup")
     config = Config(path=Path("/sample.conf"))
 
@@ -46,7 +46,7 @@ def test_parser_archive__local(fs):
     fs.create_file(
         "/sample.conf", contents=SAMPLE_CONFIG.format(storage=SAMPLE_STORAGE_LOCAL)
     )
-    fs.create_dir("/path/to/indexes")
+    fs.create_dir("/path/to")
     fs.create_dir("/path/to/backup")
     config = Config(path=Path("/sample.conf"))
 
@@ -60,7 +60,7 @@ def test_parser_archive__s3(fs):
     fs.create_file(
         "/sample.conf", contents=SAMPLE_CONFIG.format(storage=SAMPLE_STORAGE_S3)
     )
-    fs.create_dir("/path/to/indexes")
+    fs.create_dir("/path/to")
     config = Config(path=Path("/sample.conf"))
 
     assert isinstance(config.archive, ArchiveConfig)
@@ -105,12 +105,12 @@ def test_parser_index(fs):
     fs.create_file(
         "/sample.conf", contents=SAMPLE_CONFIG.format(storage=SAMPLE_STORAGE_LOCAL)
     )
-    fs.create_dir("/path/to/indexes")
+    fs.create_dir("/path/to")
     fs.create_dir("/path/to/backup")
     config = Config(path=Path("/sample.conf"))
 
     assert isinstance(config.index, IndexConfig)
-    assert config.index.path == Path("/path/to/indexes")
+    assert config.index.path == Path("/path/to/index.sqlite")
 
 
 def test_parser_index__path_missing__raises_exception():
