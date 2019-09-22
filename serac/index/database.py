@@ -8,8 +8,9 @@ from enum import IntEnum
 from pathlib import Path
 from typing import Any, DefaultDict, Dict, List, Type
 
-from peewee import Database, SqliteDatabase, IntegerField, TextField, Model as BaseModel
-
+from peewee import Database, IntegerField
+from peewee import Model as BaseModel
+from peewee import SqliteDatabase, TextField
 
 _db = SqliteDatabase(None)
 models: DefaultDict[Database, List[Model]] = defaultdict(list)

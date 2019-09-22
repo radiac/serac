@@ -5,8 +5,8 @@ These tests are disabled by default. Set environment variables to test:
     SERAC_TEST_S3=1 S3_KEY="key" S3_SECRET="secret" \
         S3_BUCKET="bucket_name" S3_PATH="test" pytest
 """
-from io import BytesIO
 import os
+from io import BytesIO
 from pathlib import Path
 
 import boto3

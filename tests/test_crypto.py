@@ -3,7 +3,7 @@ Test serac/crypto.py
 """
 from pathlib import Path
 
-from serac.crypto import encrypt, decrypt
+from serac.crypto import decrypt, encrypt
 
 from .mocks import FilesystemTest
 

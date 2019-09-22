@@ -5,10 +5,10 @@ from __future__ import annotations
 
 from configparser import ConfigParser
 from pathlib import Path
-from typing import Any, IO, Dict
+from typing import IO, Any, Dict
 
-from ..crypto import encrypt, decrypt
-
+from ..crypto import decrypt, encrypt
+from ..exceptions import FileExists
 
 storage_registry = {}
 
@@ -47,6 +47,10 @@ class Storage(metaclass=StorageType):
             destination.close()
 
     def retrieve(self, local_path: Path, archive_id: str, password: str) -> None:
+        # Don't want to retrieve it if it already exists
+        if local_path.exists():
+            raise FileExists(local_path)
+
         source_size = self.get_size(archive_id)
         source = self.read(archive_id)
         destination: IO[bytes]

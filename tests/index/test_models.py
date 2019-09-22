@@ -1,27 +1,27 @@
 """
 Test serac/index/models.py
 """
-from datetime import datetime, timedelta
 import grp
+import pwd
+from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
-import pwd
 
-from pyfakefs import fake_filesystem
 import pytest
+from pyfakefs import fake_filesystem
 
 from serac import crypto
 from serac.config import ArchiveConfig
-from serac.storage import Local
 from serac.index.models import (
-    _uid_cache,
-    _gid_cache,
-    uid_to_name,
-    gid_to_name,
     Action,
     Archived,
     File,
+    _gid_cache,
+    _uid_cache,
+    gid_to_name,
+    uid_to_name,
 )
+from serac.storage import Local
 
 from ..mocks import DatabaseTest, FilesystemTest, FlawedStorage, gen_file
 
@@ -330,16 +330,16 @@ class TestArchivedHumanSize:
         self.assert_size(1000, 1000, "")
 
     def test_kibibytes(self):
-        self.assert_size(1000 * 1024, 1000, "k")
+        self.assert_size(1000 * 1024, 1000, "K")
 
     def test_mebibyte(self):
-        self.assert_size(1000 * 1024 * 1024, 1000, "m")
+        self.assert_size(1000 * 1024 * 1024, 1000, "M")
 
     def test_gibibyte(self):
-        self.assert_size(1000 * 1024 * 1024 * 1024, 1000, "g")
+        self.assert_size(1000 * 1024 * 1024 * 1024, 1000, "G")
 
     def test_tebibyte(self):
-        self.assert_size(1000 * 1024 * 1024 * 1024 * 1024, 1000, "t")
+        self.assert_size(1000 * 1024 * 1024 * 1024 * 1024, 1000, "T")
 
     def test_pebibyte(self):
-        self.assert_size(1000 * 1024 * 1024 * 1024 * 1024 * 1024, 1000 * 1024, "t")
+        self.assert_size(1000 * 1024 * 1024 * 1024 * 1024 * 1024, 1000 * 1024, "T")

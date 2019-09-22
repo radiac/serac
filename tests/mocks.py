@@ -1,13 +1,13 @@
 """
 Mock objects
 """
-from datetime import datetime
-from pathlib import Path
 import shutil
 import socket
-from time import time
 import threading
-from typing import Type, IO
+from datetime import datetime
+from pathlib import Path
+from time import time
+from typing import IO, Type
 
 import boto3
 from peewee import Database, SqliteDatabase

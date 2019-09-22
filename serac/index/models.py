@@ -2,17 +2,18 @@
 Database models
 """
 from __future__ import annotations
+
+import grp
+import pwd
 from datetime import datetime
 from enum import IntEnum
-import grp
 from hashlib import sha256
 from pathlib import Path
-import pwd
-from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
-from peewee import CharField, IntegerField, ForeignKeyField, TextField
+from peewee import CharField, ForeignKeyField, IntegerField, TextField
 
-from .database import Model, EnumField, PathField
+from .database import EnumField, Model, PathField
 
 if TYPE_CHECKING:
     from ..config import ArchiveConfig  # pragma: no cover
@@ -65,10 +66,10 @@ class Archived(Model):
 
     def get_human_size(self):
         size = self.size
-        for unit in ["", "k", "m", "g", "t"]:
+        for unit in ["", "K", "M", "G", "T"]:
             if size < 1024:
                 break
-            if unit != "t":
+            if unit != "T":
                 size /= 1024.0
         return size, unit
 

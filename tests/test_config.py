@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from serac.config import Config, SourceConfig, ArchiveConfig, IndexConfig
-from serac.storage import Local, S3
+from serac.config import ArchiveConfig, Config, IndexConfig, SourceConfig
+from serac.storage import S3, Local
 
 from .mocks import SAMPLE_CONFIG, SAMPLE_STORAGE_LOCAL, SAMPLE_STORAGE_S3
 

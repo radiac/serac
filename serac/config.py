@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Type, TypeVar
 
 from .storage import Storage, storage_registry
 
-
 T = TypeVar("T", bound="SectionConfig")
 
 

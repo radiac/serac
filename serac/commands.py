@@ -1,14 +1,18 @@
 """
 Commands
 """
-import click
+import sys
 from datetime import datetime
 from pathlib import Path
 from time import time
-from typing import Optional
+from typing import Dict, Optional, Type, Union
+
+import click
 
 from .config import Config
-from .index import Changeset, Pattern, State, database, scan, search, restore
+from .exceptions import SeracException
+from .index import Changeset, Pattern, State, database, restore, scan, search
+from .reporter import NullReporter, Reporter, StdoutReporter
 
 
 class Timestamp(click.DateTime):  # type: ignore  # due to typeshed issue
@@ -56,7 +60,7 @@ def test(ctx):
     Test the config file is valid
     """
     # If it reaches this, the config file has been parsed
-    print("Config file syntax is correct")
+    sys.stdout.write("Config file syntax is correct\n")
 
 
 @cli.command()
@@ -70,21 +74,29 @@ def init(ctx):
         raise click.ClickException(f"Index database {config.index.path} already exists")
     database.create_db(config.index.path)
     database.disconnect()
-    print("Index database created")
+    sys.stdout.write("Index database created\n")
 
 
 @cli.command()
+@click.option("--verbose", "-v", is_flag=True, default=False)
 @click.pass_context
-def archive(ctx):
+def archive(ctx, verbose: bool = False):
     """
     Scan and archive any changes
     """
+    report_class: Type[Reporter] = NullReporter
+    if verbose:
+        report_class = StdoutReporter
+
     config: Config = ctx.obj["config"]
     database.connect(config.index.path)
+
+    if verbose:
+        sys.stdout.write("Scanning...\n")
     changeset: Changeset = scan(
         includes=config.source.includes, excludes=config.source.excludes
     )
-    changeset.commit(archive_config=config.archive)
+    changeset.commit(archive_config=config.archive, report_class=report_class)
     database.disconnect()
 
 
@@ -123,16 +135,16 @@ def ls(ctx, pattern_str: Optional[str] = None, timestamp: Optional[int] = None):
     for file in files.by_path():
         size_num, size_unit = file.archived.get_human_size()
         m_month, m_day, m_year, m_time = file.get_human_last_modified()
-        print(
+        sys.stdout.write(
             f"{file.permissions_display} "
             f"{file.owner_display:<8.8} "
             f"{file.group_display:<8.8} "
-            f"{int(size_num):>4} "
-            f"{size_unit:<2} "
+            f"{int(size_num):>4}{size_unit:<1} "
             f"{m_month:<3} {m_day.lstrip('0'):>2} "
             f"{m_time if m_year == this_year else m_year:>5} "
             f"{file.last_modified} "
             f"{file.path}"
+            "\n"
         )
 
     database.disconnect()
@@ -152,12 +164,16 @@ def ls(ctx, pattern_str: Optional[str] = None, timestamp: Optional[int] = None):
     help="Path to file in archive",
     type=click.Path(exists=False),
 )
+@click.option(
+    "--verbose", "-v", default=False, is_flag=True, help="Provide a progress report"
+)
 @click.pass_context
 def cmd_restore(
     ctx,
     destination: str,
     timestamp: Optional[int] = None,
     pattern_str: Optional[str] = None,
+    verbose: bool = False,
 ):
     """
     Restore from the archive
@@ -168,16 +184,24 @@ def cmd_restore(
     if not timestamp:
         timestamp = int(time())
 
-    restored: int = restore(
+    report_class: Type[Reporter] = NullReporter
+    if verbose:
+        report_class = StdoutReporter
+
+    restored: Dict[str, Union[bool, SeracException]] = restore(
         archive_config=config.archive,
         timestamp=timestamp,
         destination_path=Path(destination),
         pattern=Pattern(pattern_str),
         missing_ok=True,
+        report_class=report_class,
     )
 
     if restored:
-        print(f"Restored {restored} file{'' if restored == 1 else 's'}")
+        if verbose:
+            sys.stdout.write(
+                f"Restored {len(restored)} file{'' if len(restored) == 1 else 's'}\n"
+            )
     else:
         raise click.ClickException(f"Path not found")
 

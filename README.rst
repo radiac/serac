@@ -13,16 +13,21 @@ Installation
 
 This requires Python 3.7.
 
-During development, install in a virtual environment::
+Install serac with::
 
-    mkdir serac
-    cd serac
-    git clone <path-to-repo> repo
-    virtualenv --python=python3.7 venv
+    pip install serac
+
+If you don't have Python 3.7 installed, you can install it with
+`pyenv <https://github.com/pyenv/pyenv>`_::
+
+    curl https://pyenv.run | bash
+    # restart your shell
+    pyenv update
+    pyenv install 3.7.3
+    pip install virtualenv
+    virtualenv python=python3.7 venv
     . venv/bin/activate
-    pip install pip-tools
-    cd repo
-    pip-sync
+    pip install serac
 
 
 Usage
@@ -35,55 +40,54 @@ To run serac::
 
     /path/to/venv/bin/serac CONFIG COMMAND [OPTIONS]
 
-To run during development::
-
-    python -m serac.commands CONFIG COMMAND [OPTIONS]
-
-To run tests::
-
-    cd serac/repo
-    . ../venv/bin/activate
-    pytest
-
 
 Commands
 --------
 
 After that it accepts one of the following commands:
 
-`test`
+``test``
     Test the configuration file
 
-`init`
+``init``
     Initialise an index for a new config by creating the database
 
-`archive`
+``archive``
     Archive any changes since the last archive was performed
 
-`ls [--at=DATE] [--pattern=PATTERN]`
+``ls [--at=DATE] [--pattern=PATTERN]``
     Show the state of the archive.
 
-    This follows the roughly the same layout as `ls -l`, with the following columns:
+    This follows the roughly the same layout as ``ls -l``, with the following
+    columns:
 
         * File permissions
         * Owner (as it will be restored to on this system)
         * Group (as it will be restored to on this system)
         * Size (in kibi/mebib/gibibytes, or in bytes if not specified)
         * Last modified date (this year if not specified)
-        * Last modified timestamp (temporary - for use in calls to `ls` and `restore`)
+        * Last modified timestamp (for ease of use in calls to ``ls`` and
+          ``restore``)
         * Path (as it was on the originating system)
 
-`restore DESTINATION [--at=DATE] [--pattern=PATTERN]`
+``restore DESTINATION [--at=DATE] [--pattern=PATTERN]``
     Restore some or all of an archive
 
 Arguments
 ~~~~~~~~~
 
-`DATE`
-    This must be a unix timestamp. Date strings are not yet supported.
+``DATE``
+    This should be a date in one of the following formats:
 
-`PATTERN`
-    This can either be an exact path to a file, or a partial path to a directory.
+    * epoch timestamp, eg ``1582165202``
+    * ``YYYY-MM-DD``, eg ``2020-02-20``
+    * ``YYYY-MM-DD HH:MM:SS``, eg ``2020-03-20 02:20:02``
+    * ``YYYY-MM-DDTHH:MM:SS``, eg ``2020-03-20T02:20:02``
+
+``PATTERN``
+    This can either be an exact path to a file, or a partial path to a
+    directory.
+
     Globs are not yet supported.
 
 
@@ -126,3 +130,29 @@ Configure serac using a config file::
     # Location for index database
     # This should then be backed up by another service, eg duplicity
     path = /path/to/index.sqlite
+
+
+Contributing
+============
+
+To work on serac, install it in a virtual environment::
+
+    mkdir serac
+    cd serac
+    git clone <path-to-repo> repo
+    virtualenv --python=python3.7 venv
+    . venv/bin/activate
+    pip install pip-tools
+    cd repo
+    pip-sync
+
+To run during development::
+
+    python -m serac.commands CONFIG COMMAND [OPTIONS]
+
+To run tests::
+
+    cd serac/repo
+    . ../venv/bin/activate
+    pytest
+

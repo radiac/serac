@@ -4,7 +4,7 @@ Local storage
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, IO, TYPE_CHECKING
+from typing import IO, TYPE_CHECKING, Any, Dict
 
 from .base import Storage
 

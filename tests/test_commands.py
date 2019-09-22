@@ -8,20 +8,20 @@ from time import time
 from click.testing import CliRunner
 from peewee import SqliteDatabase
 
-from serac.commands import cli, Timestamp
+from serac.commands import Timestamp, cli
 from serac.config import ArchiveConfig
 from serac.index.database import get_current_db, set_current_db
-from serac.index.index import State, Pattern
-from serac.index.models import File, Archived
+from serac.index.index import Pattern, State
+from serac.index.models import Archived, File
+from serac.reporter import NullReporter
 
 from .mocks import (
+    SAMPLE_CONFIG,
+    SAMPLE_STORAGE_LOCAL,
     DatabaseTest,
     FilesystemTest,
     TmpFs,
-    SAMPLE_CONFIG,
-    SAMPLE_STORAGE_LOCAL,
 )
-
 
 # Timestamp to use in tests - 2001-01-30 00:00:00
 JAN_30 = 980812800
@@ -202,7 +202,7 @@ class TestCommandLsBase(CliTestMixin, FilesystemTest, DatabaseTest):
         # Because we've mocked out the search fn, we'll always get the same results
         assert result.exit_code == 0
         assert result.output.splitlines() == [
-            "-rw-r--r-- user     group     100 k  {} {} {}".format(*opts)
+            "-rw-r--r-- user     group     100K {} {} {}".format(*opts)
             for opts in [
                 ("Jan 24  2001", 980294400, "/alt/seven.txt"),
                 ("Jan 25  2001", 980380800, "/alt/six.txt"),
@@ -232,7 +232,7 @@ class TestCommandLs(TestCommandLsBase):
         result = self.ls(fs, mocker, timestamp="", pattern="")
         assert result.exit_code == 0
         assert result.output.splitlines() == [
-            "-rw-r--r-- user     group     100 k  {} {} {}".format(*opts)
+            "-rw-r--r-- user     group     100K {} {} {}".format(*opts)
             for opts in [
                 ("Jan 24 00:00", 980294400, "/alt/seven.txt"),
                 ("Jan 25 00:00", 980380800, "/alt/six.txt"),
@@ -291,17 +291,22 @@ class TestTimestamp(TestCommandLsBase):
 
 
 class TestCommandRestore(CliTestMixin, FilesystemTest, DatabaseTest):
+    def fake_restored(self, n):
+        return {f"/path/{i}": True for i in range(n)}
+
     def test_restore__no_args__restore_with_time(self, fs, mocker, freezer):
         # Patch out everything
         freezer.move_to(datetime(2001, 1, 30))
-        mocked_restore = mocker.patch("serac.commands.restore", return_value=1)
+        mocked_restore = mocker.patch(
+            "serac.commands.restore", return_value=self.fake_restored(1)
+        )
         mocked_db_connect = mocker.patch("serac.index.database.connect")
         mocked_db_disconnect = mocker.patch("serac.index.database.disconnect")
 
         result = self.cmd(fs, "restore", "/dest")
 
         assert result.exit_code == 0
-        assert "Restored 1 file" in result.output
+        assert result.output == ""
 
         archive_config = mocker.MagicMock(spec=ArchiveConfig)
         archive_config.__eq__.return_value = True
@@ -311,24 +316,36 @@ class TestCommandRestore(CliTestMixin, FilesystemTest, DatabaseTest):
             destination_path=Path("/dest"),
             pattern=Pattern(""),
             missing_ok=True,
+            report_class=NullReporter,
         )
         mocked_db_connect.assert_called_once_with(Path("/path/to/index.sqlite"))
         mocked_db_disconnect.assert_called_once()
 
-    def test_restore__multiple_files__message_ok(self, fs, mocker):
+    def test_restore__multiple_files__message_empty(self, fs, mocker):
         # Patch out everything
-        mocker.patch("serac.commands.restore", return_value=2)
+        mocker.patch("serac.commands.restore", return_value=self.fake_restored(2))
         mocker.patch("serac.index.database.connect")
         mocker.patch("serac.index.database.disconnect")
 
         result = self.cmd(fs, "restore", "/dest")
 
         assert result.exit_code == 0
+        assert result.output == ""
+
+    def test_restore__multiple_files_verbose__message_ok(self, capsys, fs, mocker):
+        # Patch out everything
+        mocker.patch("serac.commands.restore", return_value=self.fake_restored(2))
+        mocker.patch("serac.index.database.connect")
+        mocker.patch("serac.index.database.disconnect")
+
+        result = self.cmd(fs, "restore", "/dest", "--verbose")
+
+        assert result.exit_code == 0
         assert "Restored 2 files" in result.output
 
     def test_restore__no_files__raises_exception(self, fs, mocker, freezer):
         # Patch out everything
-        mocker.patch("serac.commands.restore", return_value=0)
+        mocker.patch("serac.commands.restore", return_value={})
         mocker.patch("serac.index.database.connect")
         mocker.patch("serac.index.database.disconnect")
 

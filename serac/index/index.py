@@ -3,18 +3,20 @@ Index management
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
 from collections import defaultdict
+from collections.abc import Mapping
 from fnmatch import fnmatchcase
 from glob import iglob
 from itertools import chain
 from pathlib import Path
 from time import time
-from typing import Dict, Iterator, List, Optional
+from typing import Dict, Iterator, List, Optional, Type, Union
 
 from peewee import fn
 
-from .models import Action, File, TYPE_CHECKING
+from ..exceptions import SeracException
+from ..reporter import NullReporter, Reporter
+from .models import TYPE_CHECKING, Action, File
 
 if TYPE_CHECKING:
     from ..config import ArchiveConfig  # pragma: no cover
@@ -36,12 +38,18 @@ class Changeset:
         self.metadata = defaultdict(File)
         self.deleted = defaultdict(File)
 
-    def commit(self, archive_config: ArchiveConfig) -> None:
+    def commit(
+        self, archive_config: ArchiveConfig, report_class: Type[Reporter] = NullReporter
+    ) -> None:
         for file in chain(self.metadata.values(), self.deleted.values()):
+            report = report_class(str(file.path), "updating")
             file.save()
+            report.complete("updated")
 
         for file in chain(self.added.values(), self.content.values()):
+            report = report_class(str(file.path), "archiving")
             file.archive(archive_config)
+            report.complete("archived")
 
 
 class Pattern:
@@ -205,7 +213,8 @@ def restore(
     destination_path: Path,
     pattern: Pattern = None,
     missing_ok: bool = False,
-) -> int:
+    report_class: Type[Reporter] = NullReporter,
+) -> Dict[str, Union[bool, SeracException]]:
     """
     Restore one or more files as they were at the specified timestamp, to the
     specified destination path.
@@ -215,6 +224,8 @@ def restore(
 
     If an archive path is specified, restores that file or all files under that
     path into the specified target path.
+
+    Returns a dict of ``archive_path: True`` or ``archive_path: Exception``
     """
     if not isinstance(timestamp, int):
         # This is going to be a common error, and we don't want to convert it
@@ -235,21 +246,34 @@ def restore(
 
     path: Path
     file: File
-    restored = 0
+    restored: Dict[str, Union[bool, SeracException]] = {}
     for path, file in state.items():
+        report = report_class(str(path), "")
+
         if not archive_path or archive_path == path or archive_path in path.parents:
             if archive_path:
                 target_path = destination_path / file.path.relative_to(archive_path)
             else:
                 target_path = destination_path / file.path.relative_to("/")
+            if report:
+                report.update("creating path")
             target_path.parent.mkdir(parents=True, exist_ok=True)
-            file.restore(archive_config=archive_config, to=target_path)
-            restored += 1
+
+            try:
+                report.update("restoring")
+                file.restore(archive_config=archive_config, to=target_path)
+                report.complete("restored")
+                restored[str(path)] = True
+            except SeracException as e:
+                report.complete(e.short)
+                restored[str(path)] = e
 
     if not missing_ok and not restored:
         if archive_path:
-            raise FileNotFoundError("Requested path not found in archive")
+            raise SeracException(
+                msg="Requested path not found in archive", short="not found"
+            )
         else:
-            raise FileNotFoundError("Archive is empty")
+            raise SeracException(msg="Archive is empty", short="archive empty")
 
     return restored

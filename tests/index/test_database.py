@@ -3,16 +3,16 @@ Test serac/index/database.py
 """
 from pathlib import Path
 
-from peewee import CharField, SqliteDatabase
 import pytest
+from peewee import CharField, SqliteDatabase
 
 from serac.index.database import (
     Model,
+    connect,
+    create_db,
+    disconnect,
     get_current_db,
     set_current_db,
-    create_db,
-    connect,
-    disconnect,
 )
 
 from ..mocks import MockDatabase, TmpFs

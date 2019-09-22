@@ -4,6 +4,7 @@
 #
 #    pip-compile
 #
+-e git+https://github.com/radiac/doc8.git@feature/python-api#egg=doc8
 -e git+https://github.com/radiac/pytest-freezegun.git@bugfix/class-based-tests-with-duration-regression#egg=pytest-freezegun
 appdirs==1.4.3            # via black
 asn1crypto==0.24.0        # via cryptography
@@ -21,7 +22,7 @@ click==7.0
 coverage==4.5.4           # via pytest-cov
 cryptography==2.7         # via pyaescrypt
 decorator==4.4.0          # via ipython, traitlets
-docutils==0.14            # via botocore
+docutils==0.14            # via botocore, restructuredtext-lint
 entrypoints==0.3          # via flake8
 flake8==3.7.8             # via pytest-flake8
 freezegun==0.3.12
@@ -30,6 +31,7 @@ importlib-metadata==0.19  # via pluggy, pytest
 ipdb==0.12.2
 ipython-genutils==0.2.0   # via traitlets
 ipython==7.7.0            # via ipdb
+isort==4.3.21             # via pytest-isort
 jedi==0.14.1              # via ipython
 jmespath==0.9.4           # via boto3, botocore
 mccabe==0.6.1             # via flake8
@@ -38,6 +40,7 @@ mypy-extensions==0.4.1    # via mypy
 mypy==0.720               # via pytest-mypy
 packaging==19.1           # via pytest
 parso==0.5.1              # via jedi
+pbr==5.4.2                # via stevedore
 peewee==3.10.0
 pexpect==4.7.0            # via ipython
 pickleshare==0.7.5        # via ipython
@@ -56,14 +59,17 @@ pyparsing==2.4.2          # via packaging
 pytest-black==0.3.7
 pytest-cov==2.7.1
 pytest-flake8==1.0.4
+pytest-isort==0.3.1
 pytest-mock==1.10.4
 pytest-mypy==0.3.3
 pytest==5.0.1
 python-dateutil==2.8.0    # via botocore, freezegun
 requests==2.22.0          # via smart-open
+restructuredtext-lint==1.3.0
 s3transfer==0.2.1         # via boto3
-six==1.12.0               # via cryptography, freezegun, packaging, pip-tools, prompt-toolkit, python-dateutil, traitlets
+six==1.12.0               # via cryptography, freezegun, packaging, pip-tools, prompt-toolkit, python-dateutil, stevedore, traitlets
 smart-open==1.8.4
+stevedore==1.30.1
 toml==0.10.0              # via black, pytest-black
 traitlets==4.3.2          # via ipython
 typed-ast==1.4.0          # via mypy
@@ -73,4 +79,4 @@ wcwidth==0.1.7            # via prompt-toolkit, pytest
 zipp==0.5.2               # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==41.0.1        # via ipdb, ipython
+# setuptools==41.2.0        # via ipdb, ipython
