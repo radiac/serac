@@ -69,6 +69,9 @@ class Pattern:
     def __eq__(self, other):
         return self.str == other.str
 
+    def __bool__(self):
+        return bool(self.str)
+
 
 class State(Mapping):
     """
@@ -219,13 +222,13 @@ def restore(
     Restore one or more files as they were at the specified timestamp, to the
     specified destination path.
 
-    If no archive path is specified, restores all files with their full paths
-    under the specified target path.
+    If no pattern is specified, restores all files with their full paths
+    under the specified destination path.
 
-    If an archive path is specified, restores that file or all files under that
-    path into the specified target path.
+    If a pattern is specified, restores that file or all files under that
+    path into the specified destination path.
 
-    Returns a dict of ``archive_path: True`` or ``archive_path: Exception``
+    Returns a dict of ``path: True`` or ``path: Exception``
     """
     if not isinstance(timestamp, int):
         # This is going to be a common error, and we don't want to convert it
@@ -248,15 +251,12 @@ def restore(
     file: File
     restored: Dict[str, Union[bool, SeracException]] = {}
     for path, file in state.items():
-        report = report_class(str(path), "")
-
         if not archive_path or archive_path == path or archive_path in path.parents:
+            report = report_class(str(path), "")
             if archive_path:
                 target_path = destination_path / file.path.relative_to(archive_path)
             else:
                 target_path = destination_path / file.path.relative_to("/")
-            if report:
-                report.update("creating path")
             target_path.parent.mkdir(parents=True, exist_ok=True)
 
             try:

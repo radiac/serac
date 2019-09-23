@@ -48,10 +48,10 @@ class StreamReporter(Reporter):
 
     def update(self, status: str):
         super().update(status)
-        self.stream.write(f"\r{self.file}... {status}")
+        self.stream.write(f"\r{self.file}... {status} ")
 
     def complete(self, status: str):
-        super().update(status)
+        self.update(status)
         self.stream.write("\n")
 
 
