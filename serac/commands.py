@@ -206,7 +206,3 @@ def cmd_restore(
         raise click.ClickException(f"Path not found")
 
     database.disconnect()
-
-
-if __name__ == "__main__":  # pragma: no cover
-    cli(obj={})

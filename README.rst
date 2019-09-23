@@ -73,6 +73,9 @@ After that it accepts one of the following commands:
 ``restore DESTINATION [--at=DATE] [--pattern=PATTERN]``
     Restore some or all of an archive
 
+    If an archived object is in glacier it will be marked for retrieval.
+
+
 Arguments
 ~~~~~~~~~
 
@@ -148,11 +151,10 @@ To work on serac, install it in a virtual environment::
 
 To run during development::
 
-    python -m serac.commands CONFIG COMMAND [OPTIONS]
+    python -m serac CONFIG COMMAND [OPTIONS]
 
 To run tests::
 
     cd serac/repo
     . ../venv/bin/activate
     pytest
-
