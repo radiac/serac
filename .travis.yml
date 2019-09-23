@@ -6,3 +6,13 @@ script:
 - tox
 env:
 - TOXENV=py37 DEPLOY=true
+deploy:
+  provider: pypi
+  user: radiac
+  password:
+    secure: tlRO97E6XqPJdgzA5UiP+QlQMh5eWRcAEN0hGrOkxCk9UT2VE8nwlWXJw2q2Pm8dMmopOGFYSIM10Ljtj1PxLTzkO8+QY1a1Y6t1bSJqSkTszD0lNXrBTz9DvqfCqZMJMTl/wexQ51dYVTM5W0XB/8ACnl5Pzthl35CUOuuxXggGXaCwaAT0i5swNFSsMgHXQI/WbhEwpcJp4gyJaNMHRxjLOiEtQdyEezm5KlhChTi1b5Bb+HCvTMS+1pXwy/XXvnYlWkdGhBu4J0T95+bt1m0MSwO0wN0Qq1CBEjJ+kcl+fcPajs6HYqEuIQFU+ZWgyAOKutAk4Xm/XZMF0ogQi7SZJ8Qnih/4Sr9CbrJ6obJne+94GRSjtLzyklwSCBqa/KJFnYWBNy66EAh+LxoWmW0sQ4WWgkvwUKQwYW3QTM0RLI4fEjtw9+wFL2GfwRY5oEf1tpKW5cge681hUoaYhoQ/1HTGx+oWcPFr6HdlM9Je+dQHMCakl925c541hzqjALtf2NRYteSk3RP0O+Dyfsa9kaxqSwuJBo5sInO8NkjF0lg2ZBVxMC3aNa613eAjEhzNAhEBkMC9k/hOyUcY5FaP1Gnr6qDcK8LcKz175okTrLFMAfRmyQbxsuBhAj093neQJ5+A4Abaa67uXh6rjHfroA+hmQpzhq0oL2uMaiE=
+  on:
+    tags: true
+    distributions: sdist bdist_wheel
+    repo: radiac/serac
+    condition: "$DEPLOY = true"
