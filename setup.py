@@ -21,7 +21,7 @@ setup(
     long_description=read("README.rst"),
     classifiers=[
         "Development Status :: 4 - Beta",
-        "Intended Audience :: Developers",
+        "Intended Audience :: System Administrators",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
         "Topic :: System :: Archiving :: Backup",
