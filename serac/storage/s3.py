@@ -13,6 +13,7 @@ from smart_open import open
 from ..exceptions import ArchiveUnavailable, FileExists
 from .base import Storage
 
+
 # Number of days to restore a file from Glacier for
 RESTORE_DAYS = 1
 

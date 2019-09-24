@@ -18,6 +18,7 @@ from ..exceptions import SeracException
 from ..reporter import NullReporter, Reporter
 from .models import TYPE_CHECKING, Action, File
 
+
 if TYPE_CHECKING:
     from ..config import ArchiveConfig  # pragma: no cover
 

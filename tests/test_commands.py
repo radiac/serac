@@ -23,6 +23,7 @@ from .mocks import (
     TmpFs,
 )
 
+
 # Timestamp to use in tests - 2001-01-30 00:00:00
 JAN_30 = 980812800
 

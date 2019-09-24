@@ -5,6 +5,7 @@ from typing import IO
 
 from pyAesCrypt import decryptStream, encryptStream
 
+
 # Encryption/decryption buffer size - 64K
 BUFFER_SIZE = 64 * 1024
 

@@ -10,6 +10,7 @@ from typing import IO, Any, Dict
 from ..crypto import decrypt, encrypt
 from ..exceptions import FileExists
 
+
 storage_registry = {}
 
 

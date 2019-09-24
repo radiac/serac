@@ -2,6 +2,13 @@
 Serac
 =====
 
+.. image:: https://travis-ci.org/radiac/serac.svg?branch=master
+    :target: https://travis-ci.org/radiac/serac
+
+.. image:: https://coveralls.io/repos/radiac/serac/badge.svg?branch=master&service=github
+    :target: https://coveralls.io/github/radiac/serac?branch=master
+
+
 Incremental permanent data archiver with encryption.
 
 Designed for permanently backing up data which does not change frequently,

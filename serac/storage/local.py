@@ -8,6 +8,7 @@ from typing import IO, TYPE_CHECKING, Any, Dict
 
 from .base import Storage
 
+
 if TYPE_CHECKING:
     from configparser import ConfigParser  # pragma: no cover
 

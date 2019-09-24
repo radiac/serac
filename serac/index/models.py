@@ -15,6 +15,7 @@ from peewee import CharField, ForeignKeyField, IntegerField, TextField
 
 from .database import EnumField, Model, PathField
 
+
 if TYPE_CHECKING:
     from ..config import ArchiveConfig  # pragma: no cover
 

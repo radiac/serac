@@ -12,6 +12,7 @@ from peewee import Database, IntegerField
 from peewee import Model as BaseModel
 from peewee import SqliteDatabase, TextField
 
+
 _db = SqliteDatabase(None)
 models: DefaultDict[Database, List[Model]] = defaultdict(list)
 
