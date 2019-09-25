@@ -18,7 +18,7 @@ def test_parser_source__valid(fs):
     )
     fs.create_dir("/path/to")
     fs.create_dir("/path/to/backup")
-    config = Config(path=Path("/sample.conf"))
+    config = Config(filename="/sample.conf")
 
     assert isinstance(config.source, SourceConfig)
     assert config.source.includes == ["/path/to/source", "/path/somewhere/else"]
@@ -48,7 +48,7 @@ def test_parser_archive__local(fs):
     )
     fs.create_dir("/path/to")
     fs.create_dir("/path/to/backup")
-    config = Config(path=Path("/sample.conf"))
+    config = Config(filename="/sample.conf")
 
     assert isinstance(config.archive, ArchiveConfig)
     assert isinstance(config.archive.storage, Local)
@@ -61,7 +61,7 @@ def test_parser_archive__s3(fs):
         "/sample.conf", contents=SAMPLE_CONFIG.format(storage=SAMPLE_STORAGE_S3)
     )
     fs.create_dir("/path/to")
-    config = Config(path=Path("/sample.conf"))
+    config = Config(filename="/sample.conf")
 
     assert isinstance(config.archive, ArchiveConfig)
     assert isinstance(config.archive.storage, S3)
@@ -107,7 +107,7 @@ def test_parser_index(fs):
     )
     fs.create_dir("/path/to")
     fs.create_dir("/path/to/backup")
-    config = Config(path=Path("/sample.conf"))
+    config = Config(filename="/sample.conf")
 
     assert isinstance(config.index, IndexConfig)
     assert config.index.path == Path("/path/to/index.sqlite")
@@ -153,7 +153,7 @@ def test_parser_config__sections_missing__raises_exception(fs):
     )
 
     with pytest.raises(ValueError) as e:
-        Config(path=Path("/sample.conf"))
+        Config(filename="/sample.conf")
     assert str(e.value) == (
         "Invalid config file; must contain source, archive and "
         f"index sections; instead found invalid"
@@ -172,7 +172,7 @@ def test_parser_config__archive_section_missing__raises_exception(fs):
     )
 
     with pytest.raises(ValueError) as e:
-        Config(path=Path("/sample.conf"))
+        Config(filename="/sample.conf")
     assert str(e.value) == (
         "Invalid config file; must contain source, archive and "
         f"index sections; instead found source, index"

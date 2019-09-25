@@ -1,6 +1,7 @@
 """
 Commands
 """
+import fcntl
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -46,11 +47,20 @@ class Timestamp(click.DateTime):  # type: ignore  # due to typeshed issue
     type=click.Path(exists=True, file_okay=True, dir_okay=False, resolve_path=True),
 )
 @click.pass_context
-def cli(ctx, config):
+def cli(ctx, config: str):
     try:
         ctx.obj["config"] = Config(config)
     except Exception as e:
         raise click.ClickException(f"Invalid config: {e}")
+
+    # Lock - only one process on a config at a time
+    ctx.obj["lock"] = open(config, "r")
+    try:
+        fcntl.flock(ctx.obj["lock"], fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except IOError:
+        raise click.ClickException(
+            f"Config {config} is already in use by another process"
+        )
 
 
 @cli.command()

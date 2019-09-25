@@ -108,15 +108,15 @@ class Config:
     archive: ArchiveConfig
     index: IndexConfig
 
-    def __init__(self, path: Path = None) -> None:
-        if path:
-            self.load(path)
+    def __init__(self, filename: str = None) -> None:
+        if filename:
+            self.load(filename)
 
-    def load(self, path: Path) -> None:
+    def load(self, filename: str) -> None:
         parser = ConfigParser()
 
         # Let parsing errors go through unchanged
-        parser.read(path)
+        parser.read(filename)
 
         if sorted(parser.sections()) != sorted(self.sections):
             raise ValueError(

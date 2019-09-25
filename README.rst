@@ -47,6 +47,9 @@ To run serac::
 
     /path/to/venv/bin/serac CONFIG COMMAND [OPTIONS]
 
+It is safe to run Serac from a cron job; it will not allow multiple processes to work
+with the same config file at the same time.
+
 
 Commands
 --------
@@ -165,3 +168,22 @@ To run tests::
     cd serac/repo
     . ../venv/bin/activate
     pytest
+
+
+Changelog
+=========
+
+0.0.2, 2019-09-25
+-----------------
+
+Feature:
+
+* Add process locking
+
+
+0.0.1, 2019-09-23
+-----------------
+
+Feature:
+
+* Initial release
