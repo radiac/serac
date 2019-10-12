@@ -216,3 +216,10 @@ def cmd_restore(
         raise click.ClickException(f"Path not found")
 
     database.disconnect()
+
+
+def invoke():
+    """
+    Invoke the command cli
+    """
+    cli(obj={}, prog_name="serac")

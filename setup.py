@@ -2,8 +2,7 @@ import os
 
 from setuptools import find_packages, setup
 
-
-VERSION = "0.0.2"
+from serac import VERSION
 
 
 def read(fname):
@@ -54,5 +53,5 @@ setup(
     zip_safe=True,
     packages=find_packages(exclude=("docs", "tests*")),
     include_package_data=True,
-    entry_points={"console_scripts": ["serac=serac.commands:cli"]},
+    entry_points={"console_scripts": ["serac=serac.commands:invoke"]},
 )

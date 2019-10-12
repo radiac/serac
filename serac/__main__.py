@@ -1,8 +1,8 @@
 """
 Invoke the command line when called directly
 """
-from .commands import cli
+from .commands import invoke
 
 
 if __name__ == "__main__":
-    cli(obj={}, prog_name="serac")
+    invoke()
