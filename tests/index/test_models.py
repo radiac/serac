@@ -190,6 +190,66 @@ class TestFile(DatabaseTest, FilesystemTest):
             file.archive(archive_config)
         assert str(e.value) == "Cannot archive a file twice"
 
+    def test_archive_duplicate_content__reuses_archived_object(self, fs):
+        """Test that archiving two files with identical content reuses the same Archived object."""
+        fs.create_file("/src/foo", contents="identical_content")
+        fs.create_file("/src/bar", contents="identical_content")
+        fs.create_dir("/dest")
+        archive_config = ArchiveConfig(
+            storage=Local(path=Path("/dest/")), password="secret"
+        )
+
+        # Archive first file
+        file1 = File(path=Path("/src/foo"), action=Action.ADD)
+        file1.refresh_metadata_from_disk()
+        file1.archive(archive_config)
+
+        # Archive second file with same content
+        file2 = File(path=Path("/src/bar"), action=Action.ADD)
+        file2.refresh_metadata_from_disk()
+        file2.archive(archive_config)
+
+        # Both files should reference the same Archived object
+        assert file1.archived.id == file2.archived.id
+
+        # There should only be one Archived record
+        archives = Archived.select()
+        assert len(archives) == 1
+
+        # There should only be one file in the storage (deduplication)
+        dest_files = list(Path("/dest").iterdir())
+        assert len(dest_files) == 1
+
+    def test_archive_different_content__creates_separate_archived_objects(self, fs):
+        """Test that archiving two files with different content creates separate Archived objects."""
+        fs.create_file("/src/foo", contents="content_one")
+        fs.create_file("/src/bar", contents="content_two")
+        fs.create_dir("/dest")
+        archive_config = ArchiveConfig(
+            storage=Local(path=Path("/dest/")), password="secret"
+        )
+
+        # Archive first file
+        file1 = File(path=Path("/src/foo"), action=Action.ADD)
+        file1.refresh_metadata_from_disk()
+        file1.archive(archive_config)
+
+        # Archive second file with different content
+        file2 = File(path=Path("/src/bar"), action=Action.ADD)
+        file2.refresh_metadata_from_disk()
+        file2.archive(archive_config)
+
+        # Files should reference different Archived objects
+        assert file1.archived.id != file2.archived.id
+
+        # There should be two Archived records
+        archives = Archived.select()
+        assert len(archives) == 2
+
+        # There should be two files in the storage
+        dest_files = list(Path("/dest").iterdir())
+        assert len(dest_files) == 2
+
     def test_restore(self, fs):
         archive_config = ArchiveConfig(
             storage=Local(path=Path("/dest/")), password="secret"

@@ -3,7 +3,6 @@ Index management
 """
 from __future__ import annotations
 
-from collections import defaultdict
 from collections.abc import Mapping
 from fnmatch import fnmatchcase
 from glob import iglob
@@ -28,16 +27,11 @@ class Changeset:
     Set of changes from an index scan
     """
 
-    added: Dict[Path, File]
-    content: Dict[Path, File]
-    metadata: Dict[Path, File]
-    deleted: Dict[Path, File]
-
     def __init__(self):
-        self.added = defaultdict(File)
-        self.content = defaultdict(File)
-        self.metadata = defaultdict(File)
-        self.deleted = defaultdict(File)
+        self.added: Dict[Path, File] = {}
+        self.content: Dict[Path, File] = {}
+        self.metadata: Dict[Path, File] = {}
+        self.deleted: Dict[Path, File] = {}
 
     def commit(
         self, archive_config: ArchiveConfig, report_class: Type[Reporter] = NullReporter
@@ -105,14 +99,18 @@ class State(Mapping):
             # ourselves - we won't have the timezone info and we'll make a mistake
             raise ValueError("Can only get state using a timestamp")
 
-        file_fields = File._meta.sorted_fields + [
-            fn.MAX(File.last_modified).alias("latest_modified")
-        ]
-        files = (
-            File.select(*file_fields)
+        # Subquery to get the latest file ID for each path at or before the timestamp
+        latest_ids = (
+            File.select(fn.MAX(File.id).alias("max_id"))
             .where(File.last_modified <= timestamp)
             .group_by(File.path)
-            .having(File.action != Action.DELETE)
+        )
+
+        # Get the actual File records for those IDs, excluding deleted files
+        files = (
+            File.select()
+            .where(File.id.in_(latest_ids))
+            .where(File.action != Action.DELETE)
         )
         return cls(files)
 

@@ -27,7 +27,7 @@ class SectionConfig:
         return cls(**kwargs)  # type: ignore
 
     @classmethod
-    def parse_config(self, section: SectionProxy) -> Dict[str, Any]:
+    def parse_config(cls, section: SectionProxy) -> Dict[str, Any]:
         raise NotImplementedError()  # pragma: no cover
 
 
@@ -41,7 +41,7 @@ class SourceConfig(SectionConfig):
     excludes: List[str]
 
     @classmethod
-    def parse_config(self, section: SectionProxy) -> Dict[str, Any]:
+    def parse_config(cls, section: SectionProxy) -> Dict[str, Any]:
         includes = section.get("include", "").split()
         excludes = section.get("exclude", "").split()
 
@@ -61,7 +61,7 @@ class ArchiveConfig(SectionConfig):
     password: str
 
     @classmethod
-    def parse_config(self, section: SectionProxy) -> Dict[str, Any]:
+    def parse_config(cls, section: SectionProxy) -> Dict[str, Any]:
         storage_type = section.get("storage", "")
         password = section.get("password", "")
 
@@ -86,7 +86,7 @@ class IndexConfig(SectionConfig):
     path: Path
 
     @classmethod
-    def parse_config(self, section: SectionProxy) -> Dict[str, Any]:
+    def parse_config(cls, section: SectionProxy) -> Dict[str, Any]:
         path_raw: str = section.get("path", "")
 
         if not path_raw:

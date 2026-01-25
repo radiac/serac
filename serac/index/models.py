@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import grp
 import pwd
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import IntEnum
 from hashlib import sha256
 from pathlib import Path
@@ -198,8 +198,9 @@ class File(Model):
         if not self.last_modified:
             return ["", "", "", ""]
 
-        dt = datetime.utcfromtimestamp(self.last_modified)
-        dt_local = dt.astimezone()
+        # Create timezone-aware datetime from timestamp, then convert to local time
+        dt_utc = datetime.fromtimestamp(self.last_modified, tz=timezone.utc)
+        dt_local = dt_utc.astimezone()
         return dt_local.strftime("%b %d %Y %H:%M").split(" ")
 
     def calculate_hash(self, force=False) -> str:
@@ -226,16 +227,28 @@ class File(Model):
         """
         Push to the archive
 
-        Creates Archived object and sets it on this object, saving this File object
+        Creates Archived object and sets it on this object, saving this File object.
+        Uses content-based deduplication: if a file with the same hash already exists
+        in the archive, we reuse it instead of uploading again.
         """
         # Ensure this object is not yet in the database
         # If it is, it will already have been archived (File.archived is required)
         if self.id:
             raise ValueError("Cannot archive a file twice")
 
-        # Create Archived object with hash to get ID
+        file_hash = self.calculate_hash()
+
+        # Check for existing archived object with same hash (deduplication)
+        existing_archived = Archived.get_or_none(Archived.hash == file_hash)
+        if existing_archived is not None:
+            # Reuse existing archived object - no need to upload
+            self.archived = existing_archived
+            self.save()
+            return
+
+        # Create new Archived object with hash to get ID
         # This should be created regardless of whether the archive succeeds
-        archived = Archived.create(hash=self.calculate_hash(), size=self.size)
+        archived = Archived.create(hash=file_hash, size=self.size)
 
         try:
             # Store the file

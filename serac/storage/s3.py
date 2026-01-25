@@ -3,7 +3,6 @@ Storage on AWS S3
 """
 from configparser import ConfigParser
 from enum import Enum
-from functools import lru_cache
 from pathlib import Path
 from typing import IO, Any, Dict
 
@@ -20,8 +19,16 @@ RESTORE_DAYS = 1
 
 class StorageClass(Enum):
     STANDARD = "STANDARD"
+    STANDARD_IA = "STANDARD_IA"
+    ONEZONE_IA = "ONEZONE_IA"
+    INTELLIGENT_TIERING = "INTELLIGENT_TIERING"
     GLACIER = "GLACIER"
+    GLACIER_IR = "GLACIER_IR"
     DEEP_ARCHIVE = "DEEP_ARCHIVE"
+
+
+# Storage classes that require restore before retrieval
+FROZEN_STORAGE_CLASSES = [StorageClass.GLACIER.value, StorageClass.DEEP_ARCHIVE.value]
 
 
 class ObjectFrozen(ArchiveUnavailable):
@@ -39,20 +46,40 @@ class S3(Storage):
     secret: str
     bucket: str
     path: str
+    storage_class: str
 
     @classmethod
     def parse_config(cls, config: ConfigParser) -> Dict[str, Any]:
         kwargs = {
-            key: config.get(key, "") for key in ["key", "secret", "bucket", "path"]
+            key: config.get(key, "")
+            for key in ["key", "secret", "bucket", "path", "storage_class"]
         }
 
         return kwargs
 
-    def __init__(self, key: str, secret: str, bucket: str, path: str) -> None:
+    def __init__(
+        self,
+        key: str,
+        secret: str,
+        bucket: str,
+        path: str,
+        storage_class: str = "",
+    ) -> None:
         self.key = key
         self.secret = secret
         self.bucket = bucket
         self.path = path
+        # Default to STANDARD if not specified, validate if specified
+        if storage_class:
+            valid_classes = [sc.value for sc in StorageClass]
+            if storage_class.upper() not in valid_classes:
+                raise ValueError(
+                    f"Invalid storage_class '{storage_class}'. "
+                    f"Must be one of: {', '.join(valid_classes)}"
+                )
+            self.storage_class = storage_class.upper()
+        else:
+            self.storage_class = StorageClass.STANDARD.value
 
         # Check required string values
         for attr in ["key", "secret", "bucket"]:
@@ -76,12 +103,12 @@ class S3(Storage):
         )
         return obj
 
-    @lru_cache()
     def check_is_available(self, archive_id: str) -> bool:
         obj = self.get_s3_object(archive_id)
 
-        # If it's in standard S3, nothing preventing us
-        if obj.storage_class not in [StorageClass.GLACIER, StorageClass.DEEP_ARCHIVE]:
+        # If it's not in a frozen storage class, nothing preventing us
+        # Note: obj.storage_class returns a string, not a StorageClass enum
+        if obj.storage_class not in FROZEN_STORAGE_CLASSES:
             return True
 
         # It's in glacier - check its restore state
@@ -110,7 +137,7 @@ class S3(Storage):
             raise FileExists(local_path)
 
         try:
-            self.check_is_available()
+            self.check_is_available(archive_id)
         except ObjectFrozen:
             # Object is frozen, start the thaw
             self.start_s3_restore(archive_id)
@@ -128,22 +155,23 @@ class S3(Storage):
 
     def start_s3_restore(self, archive_id: str) -> None:
         restore_request = {
-            "OutputLocation": {
-                "S3": {
-                    "BucketName": "destination-bucket",
-                    "Prefix": "destination-prefix",
-                }
-            },
             "Days": RESTORE_DAYS,
+            "GlacierJobParameters": {
+                "Tier": "Standard",
+            },
         }
-        self.s3_resource.restore_object(
-            Bucket="bucket-name",
-            Key=f"{self.path}/{archive_id}",
-            RestoreRequest=restore_request,
-        )
+        obj = self.get_s3_object(archive_id)
+        obj.restore_object(RestoreRequest=restore_request)
 
     def read(self, archive_id: str) -> IO[bytes]:
         return open(self.get_s3_path(archive_id), "rb")
 
     def write(self, archive_id: str) -> IO[bytes]:
-        return open(self.get_s3_path(archive_id), "wb")
+        transport_params = {
+            "client_kwargs": {"S3.Client.put_object": {"StorageClass": self.storage_class}}
+        }
+        return open(
+            self.get_s3_path(archive_id),
+            "wb",
+            transport_params=transport_params,
+        )

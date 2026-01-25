@@ -41,6 +41,39 @@ class TestS3Config:
     def test_init__missing_path__no_exception_raised(self):
         S3(key="key", secret="secret", bucket="bucket", path="")
 
+    def test_init__default_storage_class__is_standard(self):
+        s3 = S3(key="key", secret="secret", bucket="bucket", path="path")
+        assert s3.storage_class == "STANDARD"
+
+    def test_init__storage_class_glacier__accepted(self):
+        s3 = S3(
+            key="key", secret="secret", bucket="bucket", path="path",
+            storage_class="GLACIER"
+        )
+        assert s3.storage_class == "GLACIER"
+
+    def test_init__storage_class_deep_archive__accepted(self):
+        s3 = S3(
+            key="key", secret="secret", bucket="bucket", path="path",
+            storage_class="DEEP_ARCHIVE"
+        )
+        assert s3.storage_class == "DEEP_ARCHIVE"
+
+    def test_init__storage_class_lowercase__normalized_to_uppercase(self):
+        s3 = S3(
+            key="key", secret="secret", bucket="bucket", path="path",
+            storage_class="glacier"
+        )
+        assert s3.storage_class == "GLACIER"
+
+    def test_init__invalid_storage_class__raises_exception(self):
+        with pytest.raises(ValueError) as e:
+            S3(
+                key="key", secret="secret", bucket="bucket", path="path",
+                storage_class="INVALID_CLASS"
+            )
+        assert "Invalid storage_class 'INVALID_CLASS'" in str(e.value)
+
 
 @pytest.mark.skipif(
     not os.getenv("SERAC_TEST_S3", ""), reason="Not running S3 integration tests"

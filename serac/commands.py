@@ -41,6 +41,17 @@ class Timestamp(click.DateTime):  # type: ignore  # due to typeshed issue
         return "Timestamp"
 
 
+def cleanup_lock(ctx):
+    """Close the lock file handle if it exists."""
+    lock = ctx.obj.get("lock")
+    if lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+            lock.close()
+        except Exception:
+            pass  # Ignore errors during cleanup
+
+
 @click.group()
 @click.argument(
     "config",
@@ -58,9 +69,13 @@ def cli(ctx, config: str):
     try:
         fcntl.flock(ctx.obj["lock"], fcntl.LOCK_EX | fcntl.LOCK_NB)
     except IOError:
+        ctx.obj["lock"].close()
         raise click.ClickException(
             f"Config {config} is already in use by another process"
         )
+
+    # Register cleanup to run when the CLI exits
+    ctx.call_on_close(lambda: cleanup_lock(ctx))
 
 
 @cli.command()
